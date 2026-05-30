@@ -24,25 +24,33 @@ class GeminiClient(AIClient):
         genai.configure(api_key=api_key)
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
-        try:
-            # We initialize the model with the system instruction
-            model = genai.GenerativeModel(
-                model_name="gemini-3.5-flash",
-                system_instruction=system_prompt
-            )
-            response = model.generate_content(
-                user_prompt,
-                generation_config={
-                    "max_output_tokens": 8192,
-                    "temperature": 0.3
-                }
-            )
-            if not response.text:
-                raise ValueError("Received empty response from Gemini API.")
-            return response.text
-        except Exception as e:
-            print(f"Error calling Gemini API: {e}")
-            raise e
+        models_to_try = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+        last_error = None
+        
+        for model_name in models_to_try:
+            try:
+                print(f"Attempting generation with model: {model_name}")
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    system_instruction=system_prompt
+                )
+                response = model.generate_content(
+                    user_prompt,
+                    generation_config={
+                        "max_output_tokens": 8192,
+                        "temperature": 0.3
+                    }
+                )
+                if not response.text:
+                    raise ValueError("Received empty response from Gemini API.")
+                return response.text
+            except Exception as e:
+                last_error = e
+                print(f"Model {model_name} failed: {e}. Falling back to next model...")
+                continue
+                
+        print(f"All Gemini models failed. Last error: {last_error}")
+        raise last_error
 
 class ClaudeClient(AIClient):
     def __init__(self):

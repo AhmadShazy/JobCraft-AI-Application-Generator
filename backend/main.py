@@ -41,11 +41,31 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 # Pydantic models for request validation
 class GenerateRequest(BaseModel):
     jd: str
-    company_name: str
+    company_name: str | None = None
 
 class AnswerRequest(BaseModel):
     jd: str
     question: str
+
+def detect_company_name(jd: str) -> str:
+    """Extracts the hiring company name from the JD using Gemini. Falls back to 'unknown'."""
+    client = GeminiClient()
+    sys_prompt = (
+        "You are a precise data extractor. Extract the hiring company name from the provided Job Description. "
+        "Return ONLY the raw company name. Do not include any explanation, quotes, introductory text, or punctuation. "
+        "If the company name is not mentioned, unclear, or cannot be determined, return 'unknown'."
+    )
+    try:
+        response = client.generate(sys_prompt, jd)
+        name = response.strip()
+        # Remove any unwanted quotes, backticks, or surrounding periods
+        name = re.sub(r'["\'`\.]', '', name).strip()
+        if not name or name.lower() == "unknown":
+            return "unknown"
+        return name
+    except Exception as e:
+        print(f"Error extracting company name: {e}")
+        return "unknown"
 
 def sanitize_filename(name: str) -> str:
     """Removes invalid filename characters and replaces spaces with underscores."""
@@ -74,11 +94,17 @@ def generate_documents(request: GenerateRequest):
         print("Generating resume content via Gemini...")
         raw_resume = client.generate(resume_sys, resume_user)
         
+        # Resolve company name (either supplied or auto-extracted)
+        company_name = request.company_name.strip() if request.company_name else None
+        if not company_name:
+            company_name = detect_company_name(request.jd)
+        print(f"Resolved company name: {company_name}")
+
         # 2. Generate Cover Letter content
         cl_sys = COVER_LETTER_SYSTEM_PROMPT
         cl_user = COVER_LETTER_USER_PROMPT_TEMPLATE.format(
             profile_json=profile_str, 
-            company_name=request.company_name, 
+            company_name=company_name, 
             jd=request.jd
         )
         
@@ -94,7 +120,7 @@ def generate_documents(request: GenerateRequest):
 
         # 3. Create document filenames
         date_str = datetime.now().strftime("%Y-%m-%d")
-        safe_company = sanitize_filename(request.company_name)
+        safe_company = sanitize_filename(company_name)
         
         resume_filename = f"Ahmad-Sheraz_{safe_company}_{date_str}.docx"
         cl_filename = f"CoverLetter_Ahmad-Sheraz_{safe_company}_{date_str}.docx"
@@ -137,7 +163,7 @@ def generate_documents(request: GenerateRequest):
         
         history_entry = {
             "id": str(uuid.uuid4()),
-            "company_name": request.company_name,
+            "company_name": company_name,
             "date": date_str,
             "resume_filename": resume_filename,
             "coverletter_filename": cl_filename,
