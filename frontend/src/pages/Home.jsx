@@ -9,6 +9,15 @@ import HistoryDrawer from '../components/HistoryDrawer';
 import { generateDocs, answerQuestion, getHistory } from '../api/client';
 import { AlertCircle } from 'lucide-react';
 
+const triggerDownload = (url) => {
+  const link = document.createElement('a');
+  link.href = `http://localhost:8000${url}`;
+  link.setAttribute('download', '');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 function Home({ onLogout }) {
   const [companyName, setCompanyName] = useState('');
   const [jd, setJd] = useState('');
@@ -60,6 +69,16 @@ function Home({ onLogout }) {
       setCoverletterUrl(data.coverletter_url);
       // Auto-refresh history lists so the generated item is added instantly
       fetchHistory();
+
+      // Automatically trigger downloads
+      if (data.resume_url) {
+        triggerDownload(data.resume_url);
+      }
+      if (data.coverletter_url) {
+        setTimeout(() => {
+          triggerDownload(data.coverletter_url);
+        }, 150);
+      }
     } catch (err) {
       console.error(err);
       setError(
