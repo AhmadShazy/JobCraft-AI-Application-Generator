@@ -103,14 +103,14 @@ function Home({ onLogout }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <Navbar onLogout={onLogout} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
         
         {/* Error Alert Display */}
         {error && (
-          <div className="flex items-start space-x-3 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl text-red-800 text-sm font-semibold animate-fade-in shadow-sm">
+          <div className="flex items-start space-x-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-xl text-red-800 text-sm font-semibold animate-fade-in shadow-sm flex-shrink-0">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">{error}</div>
             <button 
@@ -122,29 +122,28 @@ function Home({ onLogout }) {
           </div>
         )}
 
-        {/* Dashboard Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        {/* Dashboard Workspace — fills all remaining height */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
           
           {/* Left Column (Inputs & Generation) */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 overflow-hidden">
             <JDInput
               jd={jd}
               setJd={setJd}
               disabled={isGenerating}
             />
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="bg-white px-5 py-4 rounded-2xl border border-slate-100 shadow-sm flex-shrink-0">
               <GenerateButton
                 onClick={handleGenerate}
                 disabled={isGenerating || !jd.trim()}
               />
-              
               {isGenerating && <Loader />}
             </div>
           </div>
 
           {/* Right Column (Q&A Panel) */}
-          <div className="flex flex-col">
+          <div className="flex flex-col overflow-hidden">
             <QAPanel
               qaList={qaList}
               onSendQuestion={handleSendQuestion}

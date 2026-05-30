@@ -18,7 +18,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen overflow-hidden bg-slate-50 flex flex-col">
       {isAuthenticated ? (
         <Home onLogout={handleLogout} />
       ) : (
