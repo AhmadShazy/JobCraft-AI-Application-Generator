@@ -18,7 +18,6 @@ const triggerDownload = (url) => {
 };
 
 function Home({ onLogout }) {
-  const [companyName, setCompanyName] = useState('');
   const [jd, setJd] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -46,10 +45,6 @@ function Home({ onLogout }) {
   };
 
   const handleGenerate = async () => {
-    if (!companyName.trim()) {
-      setError('Please provide a target company name before generating.');
-      return;
-    }
     if (!jd.trim()) {
       setError('Please paste a job description details before generating.');
       return;
@@ -59,7 +54,7 @@ function Home({ onLogout }) {
     setIsGenerating(true);
 
     try {
-      const data = await generateDocs(jd.trim(), companyName.trim());
+      const data = await generateDocs(jd.trim());
       // Auto-refresh history lists so the generated item is added instantly
       fetchHistory();
 
@@ -132,8 +127,6 @@ function Home({ onLogout }) {
           {/* Left Column (Inputs & Generation) */}
           <div className="lg:col-span-7 space-y-6">
             <JDInput
-              companyName={companyName}
-              setCompanyName={setCompanyName}
               jd={jd}
               setJd={setJd}
               disabled={isGenerating}
@@ -142,7 +135,7 @@ function Home({ onLogout }) {
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <GenerateButton
                 onClick={handleGenerate}
-                disabled={isGenerating || !companyName.trim() || !jd.trim()}
+                disabled={isGenerating || !jd.trim()}
               />
               
               {isGenerating && <Loader />}

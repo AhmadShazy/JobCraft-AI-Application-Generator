@@ -19,10 +19,9 @@ export const getHistory = async () => {
   return response.data;
 };
 
-export const generateDocs = async (jd, companyName) => {
+export const generateDocs = async (jd) => {
   const response = await api.post('/generate', {
     jd,
-    company_name: companyName,
   });
   return response.data;
 };
