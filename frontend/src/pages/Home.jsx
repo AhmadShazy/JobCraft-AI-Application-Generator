@@ -9,12 +9,13 @@ import { generateDocs, answerQuestion, getHistory } from '../api/client';
 import { AlertCircle } from 'lucide-react';
 
 const triggerDownload = (url) => {
-  const link = document.createElement('a');
-  link.href = `http://localhost:8000${url}`;
-  link.setAttribute('download', '');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = `http://localhost:8000${url}`;
+  document.body.appendChild(iframe);
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 2000);
 };
 
 function Home({ onLogout }) {
@@ -65,7 +66,7 @@ function Home({ onLogout }) {
       if (data.coverletter_url) {
         setTimeout(() => {
           triggerDownload(data.coverletter_url);
-        }, 150);
+        }, 500);
       }
     } catch (err) {
       console.error(err);
