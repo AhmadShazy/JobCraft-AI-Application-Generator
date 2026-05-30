@@ -3,7 +3,6 @@ import Navbar from '../components/Navbar';
 import JDInput from '../components/JDInput';
 import GenerateButton from '../components/GenerateButton';
 import Loader from '../components/Loader';
-import DownloadPanel from '../components/DownloadPanel';
 import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
 import { generateDocs, answerQuestion, getHistory } from '../api/client';
@@ -22,8 +21,6 @@ function Home({ onLogout }) {
   const [companyName, setCompanyName] = useState('');
   const [jd, setJd] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [resumeUrl, setResumeUrl] = useState('');
-  const [coverletterUrl, setCoverletterUrl] = useState('');
   const [error, setError] = useState('');
 
   // History state
@@ -60,13 +57,9 @@ function Home({ onLogout }) {
 
     setError('');
     setIsGenerating(true);
-    setResumeUrl('');
-    setCoverletterUrl('');
 
     try {
       const data = await generateDocs(jd.trim(), companyName.trim());
-      setResumeUrl(data.resume_url);
-      setCoverletterUrl(data.coverletter_url);
       // Auto-refresh history lists so the generated item is added instantly
       fetchHistory();
 
@@ -154,11 +147,6 @@ function Home({ onLogout }) {
               
               {isGenerating && <Loader />}
             </div>
-
-            <DownloadPanel
-              resumeUrl={resumeUrl}
-              coverletterUrl={coverletterUrl}
-            />
           </div>
 
           {/* Right Column (Q&A Panel) */}
