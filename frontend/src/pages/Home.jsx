@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import JDInput from '../components/JDInput';
 import GenerateButton from '../components/GenerateButton';
 import Loader from '../components/Loader';
 import DownloadPanel from '../components/DownloadPanel';
 import QAPanel from '../components/QAPanel';
-import { generateDocs, answerQuestion } from '../api/client';
+import HistoryDrawer from '../components/HistoryDrawer';
+import { generateDocs, answerQuestion, getHistory } from '../api/client';
 import { AlertCircle } from 'lucide-react';
 
 function Home({ onLogout }) {
@@ -16,9 +17,27 @@ function Home({ onLogout }) {
   const [coverletterUrl, setCoverletterUrl] = useState('');
   const [error, setError] = useState('');
 
+  // History state
+  const [historyList, setHistoryList] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
   // Q&A state
   const [qaList, setQaList] = useState([]);
   const [isAnswering, setIsAnswering] = useState(false);
+
+  // Load history on mount
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const data = await getHistory();
+      setHistoryList(data);
+    } catch (err) {
+      console.error('Failed to retrieve history logs:', err);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!companyName.trim()) {
@@ -39,6 +58,8 @@ function Home({ onLogout }) {
       const data = await generateDocs(jd.trim(), companyName.trim());
       setResumeUrl(data.resume_url);
       setCoverletterUrl(data.coverletter_url);
+      // Auto-refresh history lists so the generated item is added instantly
+      fetchHistory();
     } catch (err) {
       console.error(err);
       setError(
@@ -75,7 +96,7 @@ function Home({ onLogout }) {
 
   return (
     <div className="flex-1 flex flex-col">
-      <Navbar onLogout={onLogout} />
+      <Navbar onLogout={onLogout} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         
@@ -133,6 +154,13 @@ function Home({ onLogout }) {
         </div>
 
       </main>
+
+      <HistoryDrawer
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        historyList={historyList}
+        onRefresh={fetchHistory}
+      />
     </div>
   );
 }
