@@ -98,13 +98,19 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         skill_categories = [
             ("Languages", "languages"),
             ("AI & Machine Learning", "ai_ml"),
-            ("Backend & Frameworks", "backend"),
+            ("Backend & Frameworks", "backend_and_apis"),
             ("Databases", "databases"),
-            ("Tools & Platforms", "tools")
+            ("Tools & Platforms", "tools_and_platforms")
         ]
 
         for display_name, key in skill_categories:
             items = skills_data.get(key, [])
+            if not items:
+                if key == "backend_and_apis":
+                    items = skills_data.get("backend", [])
+                elif key == "tools_and_platforms":
+                    items = skills_data.get("tools", [])
+            
             if items:
                 skill_p = doc.add_paragraph()
                 skill_p.paragraph_format.space_after = Pt(3)
@@ -236,7 +242,11 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         for cert in certs_data:
             cert_p = doc.add_paragraph(style='List Bullet')
             cert_p.paragraph_format.space_after = Pt(2)
-            cert_run = cert_p.add_run(cert)
+            if isinstance(cert, dict):
+                text = f"{cert.get('name', '')} – {cert.get('issuer', '')} ({cert.get('date', '')})"
+            else:
+                text = str(cert)
+            cert_run = cert_p.add_run(text)
             apply_font_settings(cert_run, size_pt=10)
 
     # 8. Volunteer Work
@@ -250,10 +260,30 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
         for vol in vol_data:
-            vol_p = doc.add_paragraph(style='List Bullet')
-            vol_p.paragraph_format.space_after = Pt(2)
-            vol_run = vol_p.add_run(vol)
-            apply_font_settings(vol_run, size_pt=10)
+            if isinstance(vol, dict):
+                vol_p = doc.add_paragraph()
+                vol_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                vol_p.paragraph_format.space_before = Pt(3)
+                vol_p.paragraph_format.space_after = Pt(1)
+
+                role_org = f"{vol.get('role', '')} – {vol.get('organization', '')}"
+                role_run = vol_p.add_run(role_org)
+                apply_font_settings(role_run, size_pt=10.5, bold=True)
+
+                duration_run = vol_p.add_run(f"\t{vol.get('duration', '')}")
+                apply_font_settings(duration_run, size_pt=10, bold=True)
+
+                for bullet in vol.get("bullets", []):
+                    bullet_p = doc.add_paragraph(style='List Bullet')
+                    bullet_p.paragraph_format.space_after = Pt(2)
+                    bullet_p.paragraph_format.line_spacing = 1.1
+                    bullet_run = bullet_p.add_run(bullet)
+                    apply_font_settings(bullet_run, size_pt=10)
+            else:
+                vol_p = doc.add_paragraph(style='List Bullet')
+                vol_p.paragraph_format.space_after = Pt(2)
+                vol_run = vol_p.add_run(str(vol))
+                apply_font_settings(vol_run, size_pt=10)
 
     # 9. Languages
     lang_data = resume_data.get("languages", [])
@@ -265,9 +295,16 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = lang_title_p.add_run("LANGUAGES")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
+        lang_strings = []
+        for lang in lang_data:
+            if isinstance(lang, dict):
+                lang_strings.append(f"{lang.get('language', '')} ({lang.get('level', '')})")
+            else:
+                lang_strings.append(str(lang))
+
         lang_p = doc.add_paragraph()
         lang_p.paragraph_format.space_after = Pt(8)
-        lang_run = lang_p.add_run(", ".join(lang_data))
+        lang_run = lang_p.add_run(", ".join(lang_strings))
         apply_font_settings(lang_run, size_pt=10)
 
     # Make parent directories if they don't exist

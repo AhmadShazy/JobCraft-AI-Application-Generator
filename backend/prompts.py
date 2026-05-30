@@ -20,9 +20,9 @@ JSON Schema:
   "skills": {
     "languages": ["Tailored list of languages from profile"],
     "ai_ml": ["Tailored list of AI/ML skills from profile"],
-    "backend": ["Tailored list of Backend skills from profile"],
+    "backend_and_apis": ["Tailored list of Backend skills from profile"],
     "databases": ["Tailored list of Databases from profile"],
-    "tools": ["Tailored list of Tools from profile"]
+    "tools_and_platforms": ["Tailored list of Tools from profile"]
   },
   "experience": [
     {
@@ -60,9 +60,27 @@ JSON Schema:
       "duration": "Nov 2021 – Jul 2023"
     }
   ],
-  "certifications": ["Tailored certifications list"],
-  "volunteer": ["Tailored volunteer list"],
-  "languages": ["Tailored languages list"]
+  "certifications": [
+    {
+      "name": "Tailored certification name",
+      "issuer": "Tailored issuer name",
+      "date": "Tailored date"
+    }
+  ],
+  "volunteer": [
+    {
+      "role": "Tailored volunteer role",
+      "organization": "Tailored organization",
+      "duration": "Tailored duration",
+      "bullets": ["Tailored description of volunteer contribution"]
+    }
+  ],
+  "languages": [
+    {
+      "language": "Tailored language name",
+      "level": "Tailored proficiency level"
+    }
+  ]
 }
 """
 
