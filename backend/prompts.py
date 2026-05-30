@@ -1,97 +1,179 @@
+def serialize_profile(profile: dict) -> str:
+    lines = []
+    lines.append(f"Name: {profile.get('name', 'Ahmad Sheraz')}")
+    lines.append(f"Email: {profile.get('email', '')}")
+    lines.append(f"Phone: {profile.get('phone', '')}")
+    lines.append(f"Location: {profile.get('location', '')}")
+    lines.append(f"LinkedIn: {profile.get('linkedin', '')}")
+    lines.append(f"GitHub: {profile.get('github', '')}")
+    lines.append(f"Tagline: {profile.get('tagline', '')}")
+    lines.append(f"Summary: {profile.get('summary', '')}")
+    lines.append("")
+    
+    lines.append("--- EDUCATION ---")
+    for edu in profile.get("education", []):
+        note_str = f" ({edu['note']})" if edu.get("note") else ""
+        lines.append(f"Degree: {edu.get('degree', '')}")
+        lines.append(f"Institution: {edu.get('institution', '')}")
+        lines.append(f"Duration: {edu.get('duration', '')}{note_str}")
+        lines.append("")
+        
+    lines.append("--- EXPERIENCE ---")
+    for exp in profile.get("experience", []):
+        lines.append(f"Job Title: {exp.get('title', '')}")
+        lines.append(f"Company: {exp.get('company', '')}")
+        lines.append(f"Location: {exp.get('location', '')}")
+        lines.append(f"Duration: {exp.get('duration', '')}")
+        lines.append("Bullets:")
+        for b in exp.get("bullets", []):
+            lines.append(f"  - {b}")
+        lines.append("")
+
+    lines.append("--- PROJECTS ---")
+    for proj in profile.get("projects", []):
+        type_str = f" ({proj['type']})" if proj.get("type") else ""
+        lines.append(f"Project Name: {proj.get('name', '')}{type_str}")
+        lines.append(f"Duration: {proj.get('duration', '')}")
+        lines.append(f"Technologies: {proj.get('stack', '')}")
+        lines.append("Bullets:")
+        for b in proj.get("bullets", []):
+            lines.append(f"  - {b}")
+        lines.append("")
+
+    lines.append("--- SKILLS ---")
+    skills = profile.get("skills", {})
+    for category, items in skills.items():
+        lines.append(f"{category.replace('_', ' ').title()}: {', '.join(items)}")
+    lines.append("")
+
+    lines.append("--- CERTIFICATIONS ---")
+    for cert in profile.get("certifications", []):
+        if isinstance(cert, dict):
+            lines.append(f"- {cert.get('name', '')} | {cert.get('issuer', '')} | {cert.get('date', '')}")
+        else:
+            lines.append(f"- {cert}")
+    lines.append("")
+
+    lines.append("--- VOLUNTEER WORK ---")
+    for vol in profile.get("volunteer", []):
+        if isinstance(vol, dict):
+            lines.append(f"Role: {vol.get('role', '')}")
+            lines.append(f"Organization: {vol.get('organization', '')}")
+            lines.append(f"Duration: {vol.get('duration', '')}")
+            lines.append("Bullets:")
+            for b in vol.get("bullets", []):
+                lines.append(f"  - {b}")
+        else:
+            lines.append(f"- {vol}")
+        lines.append("")
+
+    lines.append("--- EXTRACURRICULARS ---")
+    for extra in profile.get("extracurriculars", []):
+        if isinstance(extra, dict):
+            lines.append(f"Organization: {extra.get('organization', '')}")
+            lines.append(f"Role: {extra.get('role', '')}")
+            lines.append(f"Year: {extra.get('year', '')}")
+            lines.append("Bullets:")
+            for b in extra.get("bullets", []):
+                lines.append(f"  - {b}")
+        else:
+            lines.append(f"- {extra}")
+        lines.append("")
+
+    lines.append("--- LANGUAGES ---")
+    for lang in profile.get("languages", []):
+        if isinstance(lang, dict):
+            lines.append(f"- {lang.get('language', '')} | {lang.get('level', '')}")
+        else:
+            lines.append(f"- {lang}")
+            
+    return "\n".join(lines)
+
+def build_resume_prompt(profile_data: dict, jd: str) -> str:
+    serialized_profile = serialize_profile(profile_data)
+    return RESUME_USER_PROMPT_TEMPLATE.format(
+        profile_text=serialized_profile,
+        jd=jd
+    )
+
 RESUME_SYSTEM_PROMPT = """
 You are an expert ATS resume writer. Your job is to generate a highly tailored, ATS-optimized resume for the candidate based on their profile and the target Job Description (JD).
 
 Output Requirements:
-1. Return ONLY a valid JSON object matching the JSON schema below. Do not include markdown code block formatting (like ```json ... ```), just the raw JSON.
+1. Return ONLY the plain text resume formatted exactly with the section markers shown below. Do not include markdown code block formatting (like ```json ... ``` or ```plaintext ... ```), just the raw text content.
 2. Mirror the target JD's key terms and skills directly in the resume summary and bullet points, but keep them grounded in the candidate's real experience and projects.
 3. Every bullet point must reference real achievements from the candidate's actual projects or internship. Do not invent completely new projects.
-4. Format sections, titles, and layout keys exactly as requested.
+4. Separate sections using the exact markers:
+   === SUMMARY ===
+   === SKILLS ===
+   === EXPERIENCE ===
+   === PROJECTS ===
+   === EDUCATION ===
+   === CERTIFICATIONS ===
+   === VOLUNTEER ===
+   === LANGUAGES ===
 
-JSON Schema:
-{
-  "name": "Ahmad Sheraz",
-  "contact": {
-    "email": "ahmadshazy098@gmail.com",
-    "phone": "+92-3287537973",
-    "location": "Lahore, Pakistan",
-    "links": ["linkedin.com/in/ahmadshazy", "github.com/AhmadShazy"]
-  },
-  "summary": "A 2-3 sentence tailored professional summary highlighting relevant experience and matching the JD keywords.",
-  "skills": {
-    "languages": ["Tailored list of languages from profile"],
-    "ai_ml": ["Tailored list of AI/ML skills from profile"],
-    "backend_and_apis": ["Tailored list of Backend skills from profile"],
-    "databases": ["Tailored list of Databases from profile"],
-    "tools_and_platforms": ["Tailored list of Tools from profile"]
-  },
-  "experience": [
-    {
-      "title": "Web Developer Intern",
-      "company": "WEBBUGGS",
-      "location": "Johar Town, Lahore",
-      "duration": "Jul 2025 – Aug 2025",
-      "bullets": [
-        "Tailored bullet point referencing real achievements",
-        "Tailored bullet point referencing real achievements"
-      ]
-    }
-  ],
-  "projects": [
-    {
-      "name": "Project Name",
-      "duration": "Project Duration",
-      "stack": "List of technologies used",
-      "bullets": [
-        "Tailored bullet point referencing real achievements",
-        "Tailored bullet point referencing real achievements"
-      ]
-    }
-  ],
-  "education": [
-    {
-      "degree": "BS Computer Science",
-      "institution": "COMSATS University Islamabad, Lahore Campus",
-      "duration": "Sep 2023 – Present",
-      "note": "6th Semester"
-    },
-    {
-      "degree": "Intermediate – Pre-Engineering",
-      "institution": "Government College University (GCU), Lahore",
-      "duration": "Nov 2021 – Jul 2023"
-    }
-  ],
-  "certifications": [
-    {
-      "name": "Tailored certification name",
-      "issuer": "Tailored issuer name",
-      "date": "Tailored date"
-    }
-  ],
-  "volunteer": [
-    {
-      "role": "Tailored volunteer role",
-      "organization": "Tailored organization",
-      "duration": "Tailored duration",
-      "bullets": ["Tailored description of volunteer contribution"]
-    }
-  ],
-  "languages": [
-    {
-      "language": "Tailored language name",
-      "level": "Tailored proficiency level"
-    }
-  ]
-}
+Format for each section:
+
+=== SUMMARY ===
+A 2-3 sentence tailored professional summary highlighting relevant experience and matching the JD keywords.
+
+=== SKILLS ===
+List skills category-by-category, one per line. Format:
+Category Name: Skill 1, Skill 2, Skill 3
+(e.g., Languages: Python, JavaScript
+AI & Machine Learning: OpenCV, Scikit-Learn
+Backend & Frameworks: FastAPI, Node.js)
+
+=== EXPERIENCE ===
+Format every job entry exactly as:
+Job Title | Company Name | Location | Duration
+- Bullet point 1 (Mirror JD keywords, reference real achievements)
+- Bullet point 2 (Mirror JD keywords, reference real achievements)
+Separate multiple job entries with an empty line.
+
+=== PROJECTS ===
+Format every project entry exactly as:
+Project Name | Duration | Technologies Used
+- Bullet point 1 (Mirror JD keywords, reference real achievements)
+- Bullet point 2 (Mirror JD keywords, reference real achievements)
+Separate multiple project entries with an empty line.
+
+=== EDUCATION ===
+Format every education entry exactly as:
+Degree | Institution | Duration | Note
+(e.g., Bachelor of Science — Computer Science | COMSATS University Islamabad, Lahore Campus | Sep 2023 – Present | 6th Semester)
+
+=== CERTIFICATIONS ===
+Format each certification on a new line:
+- Certification Name | Issuer | Date
+(e.g., - Supervised Machine Learning (Regression & Classification) | Stanford Online / Coursera | Aug 2025)
+
+=== VOLUNTEER ===
+Format every volunteer entry exactly as:
+Role | Organization | Duration
+- Description of contribution
+
+=== LANGUAGES ===
+Format each language on a new line:
+- Language | Level
 """
 
 RESUME_USER_PROMPT_TEMPLATE = """
 Candidate Profile:
-{profile_json}
+{profile_text}
 
 Target Job Description:
 {jd}
 
-Generate the tailored resume JSON following the strict schema. Ensure JD keywords are integrated naturally into the summary, skills, and bullets.
+Generate the tailored resume in plain text.
+
+CRITICAL FINAL REMINDER: 
+1. You MUST include ALL sections (Summary, Skills, Experience, Projects, Education, Certifications, Volunteer, Languages).
+2. You MUST include ALL projects, ALL jobs, and ALL education entries listed in the candidate profile. Do NOT skip any of them.
+3. For every experience, project, and volunteer entry, you MUST include ALL of the corresponding bullet points from the profile. You may modify them slightly to tailors keywords to the JD, but you MUST NOT skip or summarize any bullet points. Every single bullet point must be written out.
+4. Do NOT shorten the resume or skip details. Do NOT use placeholders. 
+5. Output only the plaintext resume with the === SECTION_NAME === markers. Do not wrap in markdown tags.
 """
 
 COVER_LETTER_SYSTEM_PROMPT = """

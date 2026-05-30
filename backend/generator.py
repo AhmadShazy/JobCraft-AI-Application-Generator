@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
@@ -34,9 +35,10 @@ def apply_font_settings(run, name="Arial", size_pt=10, color_rgb=(0, 0, 0), bold
     run.bold = bold
     run.italic = italic
 
-def generate_resume_docx(resume_data: dict, output_path: str):
+def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str):
     """
-    Generates an ATS-friendly tailored resume in .docx format.
+    Generates an ATS-friendly tailored resume in .docx format by parsing
+    the plain text resume_text using regex section markers.
     Uses Arial, black-only color scheme, standard 1-inch margins,
     and a clean single-column structure.
     """
@@ -47,20 +49,26 @@ def generate_resume_docx(resume_data: dict, output_path: str):
     # Set up a right tab-stop at 6.5" for aligning dates/durations
     right_tab_stop_position = Inches(6.5)
 
-    # 1. Header (Name and Contact Info)
+    # 1. Header (Name and Contact Info) - pulled directly from the permanent profile_data
     name_p = doc.add_paragraph()
     name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     name_p.paragraph_format.space_after = Pt(2)
-    name_run = name_p.add_run(resume_data.get("name", "Ahmad Sheraz"))
+    name_run = name_p.add_run(profile_data.get("name", "Ahmad Sheraz"))
     apply_font_settings(name_run, size_pt=16, bold=True)
 
-    contact = resume_data.get("contact", {})
-    email = contact.get("email", "")
-    phone = contact.get("phone", "")
-    location = contact.get("location", "")
-    links = contact.get("links", [])
+    # Compile contact details dynamically
+    email = profile_data.get("email", "")
+    phone = profile_data.get("phone", "")
+    location = profile_data.get("location", "")
+    linkedin = profile_data.get("linkedin", "")
+    github = profile_data.get("github", "")
     
-    contact_parts = [email, phone, location] + links
+    contact_parts = [email, phone, location]
+    if linkedin:
+        contact_parts.append(linkedin)
+    if github:
+        contact_parts.append(github)
+    
     contact_text = " | ".join([p for p in contact_parts if p])
     
     contact_p = doc.add_paragraph()
@@ -69,8 +77,20 @@ def generate_resume_docx(resume_data: dict, output_path: str):
     contact_run = contact_p.add_run(contact_text)
     apply_font_settings(contact_run, size_pt=9.5)
 
+    # Parse sections using regex
+    parts = re.split(r'===\s*([^=]+?)\s*===', resume_text)
+    sections = {}
+    for i in range(1, len(parts), 2):
+        section_name = parts[i].strip().upper()
+        section_content = parts[i+1].strip()
+        sections[section_name] = section_content
+
+    # Print statement showing successfully parsed sections
+    print(f"Successfully parsed sections: {list(sections.keys())}")
+
     # 2. Professional Summary
-    if resume_data.get("summary"):
+    summary_content = sections.get("SUMMARY") or sections.get("PROFESSIONAL SUMMARY")
+    if summary_content:
         summary_title_p = doc.add_paragraph()
         summary_title_p.paragraph_format.space_before = Pt(8)
         summary_title_p.paragraph_format.space_after = Pt(4)
@@ -81,12 +101,12 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         summary_p = doc.add_paragraph()
         summary_p.paragraph_format.space_after = Pt(8)
         summary_p.paragraph_format.line_spacing = 1.15
-        summary_run = summary_p.add_run(resume_data["summary"])
+        summary_run = summary_p.add_run(summary_content)
         apply_font_settings(summary_run, size_pt=10)
 
     # 3. Technical Skills
-    skills_data = resume_data.get("skills", {})
-    if skills_data:
+    skills_content = sections.get("SKILLS") or sections.get("TECHNICAL SKILLS")
+    if skills_content:
         skills_title_p = doc.add_paragraph()
         skills_title_p.paragraph_format.space_before = Pt(8)
         skills_title_p.paragraph_format.space_after = Pt(4)
@@ -94,37 +114,27 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = skills_title_p.add_run("TECHNICAL SKILLS")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        # Mapping key display names to profile data keys
-        skill_categories = [
-            ("Languages", "languages"),
-            ("AI & Machine Learning", "ai_ml"),
-            ("Backend & Frameworks", "backend_and_apis"),
-            ("Databases", "databases"),
-            ("Tools & Platforms", "tools_and_platforms")
-        ]
-
-        for display_name, key in skill_categories:
-            items = skills_data.get(key, [])
-            if not items:
-                if key == "backend_and_apis":
-                    items = skills_data.get("backend", [])
-                elif key == "tools_and_platforms":
-                    items = skills_data.get("tools", [])
-            
-            if items:
+        lines = skills_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if ":" in line:
+                cat, items_str = [p.strip() for p in line.split(":", 1)]
+                
                 skill_p = doc.add_paragraph()
                 skill_p.paragraph_format.space_after = Pt(3)
                 skill_p.paragraph_format.line_spacing = 1.1
                 
-                cat_run = skill_p.add_run(f"{display_name}: ")
+                cat_run = skill_p.add_run(f"{cat}: ")
                 apply_font_settings(cat_run, size_pt=10, bold=True)
                 
-                list_run = skill_p.add_run(", ".join(items))
+                list_run = skill_p.add_run(items_str)
                 apply_font_settings(list_run, size_pt=10)
 
     # 4. Professional Experience
-    experience_data = resume_data.get("experience", [])
-    if experience_data:
+    exp_content = sections.get("EXPERIENCE") or sections.get("PROFESSIONAL EXPERIENCE")
+    if exp_content:
         exp_title_p = doc.add_paragraph()
         exp_title_p.paragraph_format.space_before = Pt(10)
         exp_title_p.paragraph_format.space_after = Pt(4)
@@ -132,39 +142,46 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = exp_title_p.add_run("PROFESSIONAL EXPERIENCE")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        for job in experience_data:
-            # Title & Duration with right tab stop
-            job_p = doc.add_paragraph()
-            job_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-            job_p.paragraph_format.space_before = Pt(4)
-            job_p.paragraph_format.space_after = Pt(1)
-
-            title_company = f"{job.get('title', '')} – {job.get('company', '')}"
-            title_run = job_p.add_run(title_company)
-            apply_font_settings(title_run, size_pt=10.5, bold=True)
-
-            # Tab over to right align the duration
-            duration_run = job_p.add_run(f"\t{job.get('duration', '')}")
-            apply_font_settings(duration_run, size_pt=10, bold=True)
-
-            # Location (Sub-line)
-            if job.get("location"):
-                loc_p = doc.add_paragraph()
-                loc_p.paragraph_format.space_after = Pt(2)
-                loc_run = loc_p.add_run(job["location"])
-                apply_font_settings(loc_run, size_pt=9.5, italic=True)
-
-            # Bullets
-            for bullet in job.get("bullets", []):
+        lines = exp_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("-") or line.startswith("*"):
+                bullet = line.lstrip("-* ").strip()
                 bullet_p = doc.add_paragraph(style='List Bullet')
                 bullet_p.paragraph_format.space_after = Pt(2)
                 bullet_p.paragraph_format.line_spacing = 1.1
                 bullet_run = bullet_p.add_run(bullet)
                 apply_font_settings(bullet_run, size_pt=10)
+            elif "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                title = parts[0] if len(parts) > 0 else ""
+                company = parts[1] if len(parts) > 1 else ""
+                location = parts[2] if len(parts) > 2 else ""
+                duration = parts[3] if len(parts) > 3 else ""
+
+                job_p = doc.add_paragraph()
+                job_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                job_p.paragraph_format.space_before = Pt(4)
+                job_p.paragraph_format.space_after = Pt(1)
+
+                title_company = f"{title} – {company}"
+                title_run = job_p.add_run(title_company)
+                apply_font_settings(title_run, size_pt=10.5, bold=True)
+
+                duration_run = job_p.add_run(f"\t{duration}")
+                apply_font_settings(duration_run, size_pt=10, bold=True)
+
+                if location:
+                    loc_p = doc.add_paragraph()
+                    loc_p.paragraph_format.space_after = Pt(2)
+                    loc_run = loc_p.add_run(location)
+                    apply_font_settings(loc_run, size_pt=9.5, italic=True)
 
     # 5. Projects
-    projects_data = resume_data.get("projects", [])
-    if projects_data:
+    proj_content = sections.get("PROJECTS")
+    if proj_content:
         proj_title_p = doc.add_paragraph()
         proj_title_p.paragraph_format.space_before = Pt(10)
         proj_title_p.paragraph_format.space_after = Pt(4)
@@ -172,36 +189,44 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = proj_title_p.add_run("PROJECTS")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        for proj in projects_data:
-            proj_p = doc.add_paragraph()
-            proj_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-            proj_p.paragraph_format.space_before = Pt(4)
-            proj_p.paragraph_format.space_after = Pt(1)
-
-            name_run = proj_p.add_run(proj.get("name", ""))
-            apply_font_settings(name_run, size_pt=10.5, bold=True)
-
-            duration_run = proj_p.add_run(f"\t{proj.get('duration', '')}")
-            apply_font_settings(duration_run, size_pt=10, bold=True)
-
-            # Stack sub-line
-            if proj.get("stack"):
-                stack_p = doc.add_paragraph()
-                stack_p.paragraph_format.space_after = Pt(2)
-                stack_run = stack_p.add_run(f"Technologies: {proj['stack']}")
-                apply_font_settings(stack_run, size_pt=9.5, italic=True)
-
-            # Bullets
-            for bullet in proj.get("bullets", []):
+        lines = proj_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("-") or line.startswith("*"):
+                bullet = line.lstrip("-* ").strip()
                 bullet_p = doc.add_paragraph(style='List Bullet')
                 bullet_p.paragraph_format.space_after = Pt(2)
                 bullet_p.paragraph_format.line_spacing = 1.1
                 bullet_run = bullet_p.add_run(bullet)
                 apply_font_settings(bullet_run, size_pt=10)
+            elif "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                name = parts[0] if len(parts) > 0 else ""
+                duration = parts[1] if len(parts) > 1 else ""
+                stack = parts[2] if len(parts) > 2 else ""
+
+                proj_p = doc.add_paragraph()
+                proj_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                proj_p.paragraph_format.space_before = Pt(4)
+                proj_p.paragraph_format.space_after = Pt(1)
+
+                name_run = proj_p.add_run(name)
+                apply_font_settings(name_run, size_pt=10.5, bold=True)
+
+                duration_run = proj_p.add_run(f"\t{duration}")
+                apply_font_settings(duration_run, size_pt=10, bold=True)
+
+                if stack:
+                    stack_p = doc.add_paragraph()
+                    stack_p.paragraph_format.space_after = Pt(2)
+                    stack_run = stack_p.add_run(f"Technologies: {stack}")
+                    apply_font_settings(stack_run, size_pt=9.5, italic=True)
 
     # 6. Education
-    edu_data = resume_data.get("education", [])
-    if edu_data:
+    edu_content = sections.get("EDUCATION")
+    if edu_content:
         edu_title_p = doc.add_paragraph()
         edu_title_p.paragraph_format.space_before = Pt(10)
         edu_title_p.paragraph_format.space_after = Pt(4)
@@ -209,29 +234,40 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = edu_title_p.add_run("EDUCATION")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        for edu in edu_data:
-            edu_p = doc.add_paragraph()
-            edu_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-            edu_p.paragraph_format.space_before = Pt(3)
-            edu_p.paragraph_format.space_after = Pt(1)
+        lines = edu_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                degree = parts[0] if len(parts) > 0 else ""
+                institution = parts[1] if len(parts) > 1 else ""
+                duration = parts[2] if len(parts) > 2 else ""
+                note = parts[3] if len(parts) > 3 else ""
 
-            edu_run = edu_p.add_run(edu.get("degree", ""))
-            apply_font_settings(edu_run, size_pt=10.5, bold=True)
+                edu_p = doc.add_paragraph()
+                edu_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                edu_p.paragraph_format.space_before = Pt(3)
+                edu_p.paragraph_format.space_after = Pt(1)
 
-            duration_run = edu_p.add_run(f"\t{edu.get('duration', '')}")
-            apply_font_settings(duration_run, size_pt=10, bold=True)
+                edu_run = edu_p.add_run(degree)
+                apply_font_settings(edu_run, size_pt=10.5, bold=True)
 
-            inst_p = doc.add_paragraph()
-            inst_p.paragraph_format.space_after = Pt(2)
-            inst_text = edu.get("institution", "")
-            if edu.get("note"):
-                inst_text += f" ({edu['note']})"
-            inst_run = inst_p.add_run(inst_text)
-            apply_font_settings(inst_run, size_pt=10, italic=True)
+                duration_run = edu_p.add_run(f"\t{duration}")
+                apply_font_settings(duration_run, size_pt=10, bold=True)
+
+                inst_p = doc.add_paragraph()
+                inst_p.paragraph_format.space_after = Pt(2)
+                inst_text = institution
+                if note:
+                    inst_text += f" ({note})"
+                inst_run = inst_p.add_run(inst_text)
+                apply_font_settings(inst_run, size_pt=10, italic=True)
 
     # 7. Certifications
-    certs_data = resume_data.get("certifications", [])
-    if certs_data:
+    certs_content = sections.get("CERTIFICATIONS")
+    if certs_content:
         cert_title_p = doc.add_paragraph()
         cert_title_p.paragraph_format.space_before = Pt(10)
         cert_title_p.paragraph_format.space_after = Pt(4)
@@ -239,19 +275,29 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = cert_title_p.add_run("CERTIFICATIONS")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        for cert in certs_data:
+        lines = certs_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            cert = line.lstrip("-* ").strip()
+            if "|" in cert:
+                parts = [p.strip() for p in cert.split("|")]
+                name = parts[0] if len(parts) > 0 else ""
+                issuer = parts[1] if len(parts) > 1 else ""
+                date = parts[2] if len(parts) > 2 else ""
+                text = f"{name} – {issuer} ({date})"
+            else:
+                text = cert
+
             cert_p = doc.add_paragraph(style='List Bullet')
             cert_p.paragraph_format.space_after = Pt(2)
-            if isinstance(cert, dict):
-                text = f"{cert.get('name', '')} – {cert.get('issuer', '')} ({cert.get('date', '')})"
-            else:
-                text = str(cert)
             cert_run = cert_p.add_run(text)
             apply_font_settings(cert_run, size_pt=10)
 
     # 8. Volunteer Work
-    vol_data = resume_data.get("volunteer", [])
-    if vol_data:
+    vol_content = sections.get("VOLUNTEER") or sections.get("VOLUNTEER EXPERIENCE")
+    if vol_content:
         vol_title_p = doc.add_paragraph()
         vol_title_p.paragraph_format.space_before = Pt(10)
         vol_title_p.paragraph_format.space_after = Pt(4)
@@ -259,35 +305,39 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = vol_title_p.add_run("VOLUNTEER EXPERIENCE")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        for vol in vol_data:
-            if isinstance(vol, dict):
+        lines = vol_content.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("-") or line.startswith("*"):
+                bullet = line.lstrip("-* ").strip()
+                bullet_p = doc.add_paragraph(style='List Bullet')
+                bullet_p.paragraph_format.space_after = Pt(2)
+                bullet_p.paragraph_format.line_spacing = 1.1
+                bullet_run = bullet_p.add_run(bullet)
+                apply_font_settings(bullet_run, size_pt=10)
+            elif "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                role = parts[0] if len(parts) > 0 else ""
+                org = parts[1] if len(parts) > 1 else ""
+                duration = parts[2] if len(parts) > 2 else ""
+
                 vol_p = doc.add_paragraph()
                 vol_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
                 vol_p.paragraph_format.space_before = Pt(3)
                 vol_p.paragraph_format.space_after = Pt(1)
 
-                role_org = f"{vol.get('role', '')} – {vol.get('organization', '')}"
+                role_org = f"{role} – {org}"
                 role_run = vol_p.add_run(role_org)
                 apply_font_settings(role_run, size_pt=10.5, bold=True)
 
-                duration_run = vol_p.add_run(f"\t{vol.get('duration', '')}")
+                duration_run = vol_p.add_run(f"\t{duration}")
                 apply_font_settings(duration_run, size_pt=10, bold=True)
 
-                for bullet in vol.get("bullets", []):
-                    bullet_p = doc.add_paragraph(style='List Bullet')
-                    bullet_p.paragraph_format.space_after = Pt(2)
-                    bullet_p.paragraph_format.line_spacing = 1.1
-                    bullet_run = bullet_p.add_run(bullet)
-                    apply_font_settings(bullet_run, size_pt=10)
-            else:
-                vol_p = doc.add_paragraph(style='List Bullet')
-                vol_p.paragraph_format.space_after = Pt(2)
-                vol_run = vol_p.add_run(str(vol))
-                apply_font_settings(vol_run, size_pt=10)
-
     # 9. Languages
-    lang_data = resume_data.get("languages", [])
-    if lang_data:
+    lang_content = sections.get("LANGUAGES")
+    if lang_content:
         lang_title_p = doc.add_paragraph()
         lang_title_p.paragraph_format.space_before = Pt(10)
         lang_title_p.paragraph_format.space_after = Pt(4)
@@ -295,12 +345,18 @@ def generate_resume_docx(resume_data: dict, output_path: str):
         title_run = lang_title_p.add_run("LANGUAGES")
         apply_font_settings(title_run, size_pt=11.5, bold=True)
 
+        lines = lang_content.split("\n")
         lang_strings = []
-        for lang in lang_data:
-            if isinstance(lang, dict):
-                lang_strings.append(f"{lang.get('language', '')} ({lang.get('level', '')})")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            lang_item = line.lstrip("-* ").strip()
+            if "|" in lang_item:
+                parts = [p.strip() for p in lang_item.split("|")]
+                lang_strings.append(f"{parts[0]} ({parts[1]})")
             else:
-                lang_strings.append(str(lang))
+                lang_strings.append(lang_item)
 
         lang_p = doc.add_paragraph()
         lang_p.paragraph_format.space_after = Pt(8)

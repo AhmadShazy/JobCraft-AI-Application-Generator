@@ -12,7 +12,8 @@ from pydantic import BaseModel
 from backend.prompts import (
     RESUME_SYSTEM_PROMPT, RESUME_USER_PROMPT_TEMPLATE,
     COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_PROMPT_TEMPLATE,
-    QA_SYSTEM_PROMPT, QA_USER_PROMPT_TEMPLATE
+    QA_SYSTEM_PROMPT, QA_USER_PROMPT_TEMPLATE,
+    build_resume_prompt
 )
 from backend.ai_client import GeminiClient, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
@@ -68,17 +69,10 @@ def generate_documents(request: GenerateRequest):
         
         # 1. Generate Resume content
         resume_sys = RESUME_SYSTEM_PROMPT
-        resume_user = RESUME_USER_PROMPT_TEMPLATE.format(profile_json=profile_str, jd=request.jd)
+        resume_user = build_resume_prompt(profile_data, request.jd)
         
         print("Generating resume content via Gemini...")
         raw_resume = client.generate(resume_sys, resume_user)
-        cleaned_resume_str = clean_json_response(raw_resume)
-        
-        try:
-            resume_json = json.loads(cleaned_resume_str)
-        except Exception as e:
-            print(f"Failed to parse resume JSON. Raw output: {raw_resume}")
-            raise HTTPException(status_code=500, detail=f"Failed to parse AI-generated resume JSON: {e}")
         
         # 2. Generate Cover Letter content
         cl_sys = COVER_LETTER_SYSTEM_PROMPT
@@ -110,7 +104,7 @@ def generate_documents(request: GenerateRequest):
         
         # 4. Generate the actual files
         print("Writing resume docx...")
-        generate_resume_docx(resume_json, resume_filepath)
+        generate_resume_docx(raw_resume, profile_data, resume_filepath)
         
         print("Writing cover letter docx...")
         email = profile_data.get("email", "")

@@ -24,6 +24,7 @@ jspm_packages/
 # Output folder for generated files
 backend/outputs/
 outputs/
+backend/history.json
 
 # Virtual environments
 venv/

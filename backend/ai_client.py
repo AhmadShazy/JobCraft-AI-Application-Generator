@@ -30,7 +30,13 @@ class GeminiClient(AIClient):
                 model_name="gemini-3.5-flash",
                 system_instruction=system_prompt
             )
-            response = model.generate_content(user_prompt)
+            response = model.generate_content(
+                user_prompt,
+                generation_config={
+                    "max_output_tokens": 8192,
+                    "temperature": 0.3
+                }
+            )
             if not response.text:
                 raise ValueError("Received empty response from Gemini API.")
             return response.text
