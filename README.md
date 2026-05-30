@@ -64,6 +64,12 @@ Open a **second** terminal window in the root folder of the project and run:
 
 ---
 
+### 4. Local Files & Data Security
+* **Candidate Profile (`backend/profile.json`):** Contains the candidate's core credentials (education, experience, projects, skills). Modify this file directly to update your background information.
+* **Application History (`backend/history.json`):** Tracks past applications (company names, generation dates, and pasted JDs) for local download recovery. This file is **created automatically** by the backend upon your first generation. It is listed in `.gitignore` to prevent exposing your private application logs on GitHub.
+
+---
+
 ## How to Use the Application
 
 1. Open your browser and navigate to [http://localhost:5173](http://localhost:5173).
