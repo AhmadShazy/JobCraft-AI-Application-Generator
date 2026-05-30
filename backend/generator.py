@@ -49,12 +49,32 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
     # Set up a right tab-stop at 6.5" for aligning dates/durations
     right_tab_stop_position = Inches(6.5)
 
-    # 1. Header (Name and Contact Info) - pulled directly from the permanent profile_data
+    # Parse sections using regex
+    parts = re.split(r'===\s*([^=]+?)\s*===', resume_text)
+    sections = {}
+    for i in range(1, len(parts), 2):
+        section_name = parts[i].strip().upper()
+        section_content = parts[i+1].strip()
+        sections[section_name] = section_content
+
+    # Print statement showing successfully parsed sections
+    print(f"Successfully parsed sections: {list(sections.keys())}")
+
+    # 1. Header (Name, Dynamic Tagline, and Contact Info)
     name_p = doc.add_paragraph()
     name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     name_p.paragraph_format.space_after = Pt(2)
     name_run = name_p.add_run(profile_data.get("name", "Ahmad Sheraz"))
     apply_font_settings(name_run, size_pt=16, bold=True)
+
+    # Center-aligned Dynamic Tagline under candidate name
+    tagline_val = sections.get("TAGLINE")
+    if tagline_val:
+        tagline_p = doc.add_paragraph()
+        tagline_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        tagline_p.paragraph_format.space_after = Pt(2)
+        tagline_run = tagline_p.add_run(tagline_val.strip())
+        apply_font_settings(tagline_run, size_pt=11, bold=True, italic=True)
 
     # Compile contact details dynamically
     email = profile_data.get("email", "")
@@ -77,291 +97,276 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
     contact_run = contact_p.add_run(contact_text)
     apply_font_settings(contact_run, size_pt=9.5)
 
-    # Parse sections using regex
-    parts = re.split(r'===\s*([^=]+?)\s*===', resume_text)
-    sections = {}
+    # 2. Iterate through sections sequentially in the order they were parsed
     for i in range(1, len(parts), 2):
         section_name = parts[i].strip().upper()
         section_content = parts[i+1].strip()
-        sections[section_name] = section_content
+        
+        if not section_content:
+            continue
+            
+        if section_name == "TAGLINE":
+            # Tagline has already been rendered in the header
+            continue
+            
+        elif "SUMMARY" in section_name:
+            summary_title_p = doc.add_paragraph()
+            summary_title_p.paragraph_format.space_before = Pt(8)
+            summary_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(summary_title_p)
+            title_run = summary_title_p.add_run("PROFESSIONAL SUMMARY")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-    # Print statement showing successfully parsed sections
-    print(f"Successfully parsed sections: {list(sections.keys())}")
+            summary_p = doc.add_paragraph()
+            summary_p.paragraph_format.space_after = Pt(8)
+            summary_p.paragraph_format.line_spacing = 1.15
+            summary_run = summary_p.add_run(section_content)
+            apply_font_settings(summary_run, size_pt=10)
 
-    # 2. Professional Summary
-    summary_content = sections.get("SUMMARY") or sections.get("PROFESSIONAL SUMMARY")
-    if summary_content:
-        summary_title_p = doc.add_paragraph()
-        summary_title_p.paragraph_format.space_before = Pt(8)
-        summary_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(summary_title_p)
-        title_run = summary_title_p.add_run("PROFESSIONAL SUMMARY")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+        elif "SKILL" in section_name:
+            skills_title_p = doc.add_paragraph()
+            skills_title_p.paragraph_format.space_before = Pt(8)
+            skills_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(skills_title_p)
+            title_run = skills_title_p.add_run("TECHNICAL SKILLS")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        summary_p = doc.add_paragraph()
-        summary_p.paragraph_format.space_after = Pt(8)
-        summary_p.paragraph_format.line_spacing = 1.15
-        summary_run = summary_p.add_run(summary_content)
-        apply_font_settings(summary_run, size_pt=10)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if ":" in line:
+                    cat, items_str = [p.strip() for p in line.split(":", 1)]
+                    
+                    skill_p = doc.add_paragraph()
+                    skill_p.paragraph_format.space_after = Pt(3)
+                    skill_p.paragraph_format.line_spacing = 1.1
+                    
+                    cat_run = skill_p.add_run(f"{cat}: ")
+                    apply_font_settings(cat_run, size_pt=10, bold=True)
+                    
+                    list_run = skill_p.add_run(items_str)
+                    apply_font_settings(list_run, size_pt=10)
 
-    # 3. Technical Skills
-    skills_content = sections.get("SKILLS") or sections.get("TECHNICAL SKILLS")
-    if skills_content:
-        skills_title_p = doc.add_paragraph()
-        skills_title_p.paragraph_format.space_before = Pt(8)
-        skills_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(skills_title_p)
-        title_run = skills_title_p.add_run("TECHNICAL SKILLS")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+        elif "EXPERIENCE" in section_name:
+            exp_title_p = doc.add_paragraph()
+            exp_title_p.paragraph_format.space_before = Pt(10)
+            exp_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(exp_title_p)
+            title_run = exp_title_p.add_run("PROFESSIONAL EXPERIENCE")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-        lines = skills_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if ":" in line:
-                cat, items_str = [p.strip() for p in line.split(":", 1)]
-                
-                skill_p = doc.add_paragraph()
-                skill_p.paragraph_format.space_after = Pt(3)
-                skill_p.paragraph_format.line_spacing = 1.1
-                
-                cat_run = skill_p.add_run(f"{cat}: ")
-                apply_font_settings(cat_run, size_pt=10, bold=True)
-                
-                list_run = skill_p.add_run(items_str)
-                apply_font_settings(list_run, size_pt=10)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("-") or line.startswith("*"):
+                    bullet = line.lstrip("-* ").strip()
+                    bullet_p = doc.add_paragraph(style='List Bullet')
+                    bullet_p.paragraph_format.space_after = Pt(2)
+                    bullet_p.paragraph_format.line_spacing = 1.1
+                    bullet_run = bullet_p.add_run(bullet)
+                    apply_font_settings(bullet_run, size_pt=10)
+                elif "|" in line:
+                    job_parts = [p.strip() for p in line.split("|")]
+                    title = job_parts[0] if len(job_parts) > 0 else ""
+                    company = job_parts[1] if len(job_parts) > 1 else ""
+                    location = job_parts[2] if len(job_parts) > 2 else ""
+                    duration = job_parts[3] if len(job_parts) > 3 else ""
 
-    # 4. Professional Experience
-    exp_content = sections.get("EXPERIENCE") or sections.get("PROFESSIONAL EXPERIENCE")
-    if exp_content:
-        exp_title_p = doc.add_paragraph()
-        exp_title_p.paragraph_format.space_before = Pt(10)
-        exp_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(exp_title_p)
-        title_run = exp_title_p.add_run("PROFESSIONAL EXPERIENCE")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+                    job_p = doc.add_paragraph()
+                    job_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                    job_p.paragraph_format.space_before = Pt(4)
+                    job_p.paragraph_format.space_after = Pt(1)
 
-        lines = exp_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("-") or line.startswith("*"):
-                bullet = line.lstrip("-* ").strip()
-                bullet_p = doc.add_paragraph(style='List Bullet')
-                bullet_p.paragraph_format.space_after = Pt(2)
-                bullet_p.paragraph_format.line_spacing = 1.1
-                bullet_run = bullet_p.add_run(bullet)
-                apply_font_settings(bullet_run, size_pt=10)
-            elif "|" in line:
-                parts = [p.strip() for p in line.split("|")]
-                title = parts[0] if len(parts) > 0 else ""
-                company = parts[1] if len(parts) > 1 else ""
-                location = parts[2] if len(parts) > 2 else ""
-                duration = parts[3] if len(parts) > 3 else ""
+                    title_company = f"{title} – {company}"
+                    title_run = job_p.add_run(title_company)
+                    apply_font_settings(title_run, size_pt=10.5, bold=True)
 
-                job_p = doc.add_paragraph()
-                job_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-                job_p.paragraph_format.space_before = Pt(4)
-                job_p.paragraph_format.space_after = Pt(1)
+                    duration_run = job_p.add_run(f"\t{duration}")
+                    apply_font_settings(duration_run, size_pt=10, bold=True)
 
-                title_company = f"{title} – {company}"
-                title_run = job_p.add_run(title_company)
-                apply_font_settings(title_run, size_pt=10.5, bold=True)
+                    if location:
+                        loc_p = doc.add_paragraph()
+                        loc_p.paragraph_format.space_after = Pt(2)
+                        loc_run = loc_p.add_run(location)
+                        apply_font_settings(loc_run, size_pt=9.5, italic=True)
 
-                duration_run = job_p.add_run(f"\t{duration}")
-                apply_font_settings(duration_run, size_pt=10, bold=True)
+        elif "PROJECT" in section_name:
+            proj_title_p = doc.add_paragraph()
+            proj_title_p.paragraph_format.space_before = Pt(10)
+            proj_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(proj_title_p)
+            title_run = proj_title_p.add_run("PROJECTS")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-                if location:
-                    loc_p = doc.add_paragraph()
-                    loc_p.paragraph_format.space_after = Pt(2)
-                    loc_run = loc_p.add_run(location)
-                    apply_font_settings(loc_run, size_pt=9.5, italic=True)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("-") or line.startswith("*"):
+                    bullet = line.lstrip("-* ").strip()
+                    bullet_p = doc.add_paragraph(style='List Bullet')
+                    bullet_p.paragraph_format.space_after = Pt(2)
+                    bullet_p.paragraph_format.line_spacing = 1.1
+                    bullet_run = bullet_p.add_run(bullet)
+                    apply_font_settings(bullet_run, size_pt=10)
+                elif "|" in line:
+                    proj_parts = [p.strip() for p in line.split("|")]
+                    name = proj_parts[0] if len(proj_parts) > 0 else ""
+                    duration = proj_parts[1] if len(proj_parts) > 1 else ""
+                    stack = proj_parts[2] if len(proj_parts) > 2 else ""
 
-    # 5. Projects
-    proj_content = sections.get("PROJECTS")
-    if proj_content:
-        proj_title_p = doc.add_paragraph()
-        proj_title_p.paragraph_format.space_before = Pt(10)
-        proj_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(proj_title_p)
-        title_run = proj_title_p.add_run("PROJECTS")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+                    proj_p = doc.add_paragraph()
+                    proj_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                    proj_p.paragraph_format.space_before = Pt(4)
+                    proj_p.paragraph_format.space_after = Pt(1)
 
-        lines = proj_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("-") or line.startswith("*"):
-                bullet = line.lstrip("-* ").strip()
-                bullet_p = doc.add_paragraph(style='List Bullet')
-                bullet_p.paragraph_format.space_after = Pt(2)
-                bullet_p.paragraph_format.line_spacing = 1.1
-                bullet_run = bullet_p.add_run(bullet)
-                apply_font_settings(bullet_run, size_pt=10)
-            elif "|" in line:
-                parts = [p.strip() for p in line.split("|")]
-                name = parts[0] if len(parts) > 0 else ""
-                duration = parts[1] if len(parts) > 1 else ""
-                stack = parts[2] if len(parts) > 2 else ""
+                    name_run = proj_p.add_run(name)
+                    apply_font_settings(name_run, size_pt=10.5, bold=True)
 
-                proj_p = doc.add_paragraph()
-                proj_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-                proj_p.paragraph_format.space_before = Pt(4)
-                proj_p.paragraph_format.space_after = Pt(1)
+                    duration_run = proj_p.add_run(f"\t{duration}")
+                    apply_font_settings(duration_run, size_pt=10, bold=True)
 
-                name_run = proj_p.add_run(name)
-                apply_font_settings(name_run, size_pt=10.5, bold=True)
+                    if stack:
+                        stack_p = doc.add_paragraph()
+                        stack_p.paragraph_format.space_after = Pt(2)
+                        stack_run = stack_p.add_run(f"Technologies: {stack}")
+                        apply_font_settings(stack_run, size_pt=9.5, italic=True)
 
-                duration_run = proj_p.add_run(f"\t{duration}")
-                apply_font_settings(duration_run, size_pt=10, bold=True)
+        elif "EDUCATION" in section_name:
+            edu_title_p = doc.add_paragraph()
+            edu_title_p.paragraph_format.space_before = Pt(10)
+            edu_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(edu_title_p)
+            title_run = edu_title_p.add_run("EDUCATION")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-                if stack:
-                    stack_p = doc.add_paragraph()
-                    stack_p.paragraph_format.space_after = Pt(2)
-                    stack_run = stack_p.add_run(f"Technologies: {stack}")
-                    apply_font_settings(stack_run, size_pt=9.5, italic=True)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if "|" in line:
+                    edu_parts = [p.strip() for p in line.split("|")]
+                    degree = edu_parts[0] if len(edu_parts) > 0 else ""
+                    institution = edu_parts[1] if len(edu_parts) > 1 else ""
+                    duration = edu_parts[2] if len(edu_parts) > 2 else ""
+                    note = edu_parts[3] if len(edu_parts) > 3 else ""
 
-    # 6. Education
-    edu_content = sections.get("EDUCATION")
-    if edu_content:
-        edu_title_p = doc.add_paragraph()
-        edu_title_p.paragraph_format.space_before = Pt(10)
-        edu_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(edu_title_p)
-        title_run = edu_title_p.add_run("EDUCATION")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+                    edu_p = doc.add_paragraph()
+                    edu_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                    edu_p.paragraph_format.space_before = Pt(3)
+                    edu_p.paragraph_format.space_after = Pt(1)
 
-        lines = edu_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if "|" in line:
-                parts = [p.strip() for p in line.split("|")]
-                degree = parts[0] if len(parts) > 0 else ""
-                institution = parts[1] if len(parts) > 1 else ""
-                duration = parts[2] if len(parts) > 2 else ""
-                note = parts[3] if len(parts) > 3 else ""
+                    edu_run = edu_p.add_run(degree)
+                    apply_font_settings(edu_run, size_pt=10.5, bold=True)
 
-                edu_p = doc.add_paragraph()
-                edu_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-                edu_p.paragraph_format.space_before = Pt(3)
-                edu_p.paragraph_format.space_after = Pt(1)
+                    duration_run = edu_p.add_run(f"\t{duration}")
+                    apply_font_settings(duration_run, size_pt=10, bold=True)
 
-                edu_run = edu_p.add_run(degree)
-                apply_font_settings(edu_run, size_pt=10.5, bold=True)
+                    inst_p = doc.add_paragraph()
+                    inst_p.paragraph_format.space_after = Pt(2)
+                    inst_text = institution
+                    if note:
+                        inst_text += f" ({note})"
+                    inst_run = inst_p.add_run(inst_text)
+                    apply_font_settings(inst_run, size_pt=10, italic=True)
 
-                duration_run = edu_p.add_run(f"\t{duration}")
-                apply_font_settings(duration_run, size_pt=10, bold=True)
+        elif "CERTIFICATION" in section_name:
+            cert_title_p = doc.add_paragraph()
+            cert_title_p.paragraph_format.space_before = Pt(10)
+            cert_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(cert_title_p)
+            title_run = cert_title_p.add_run("CERTIFICATIONS")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-                inst_p = doc.add_paragraph()
-                inst_p.paragraph_format.space_after = Pt(2)
-                inst_text = institution
-                if note:
-                    inst_text += f" ({note})"
-                inst_run = inst_p.add_run(inst_text)
-                apply_font_settings(inst_run, size_pt=10, italic=True)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                cert = line.lstrip("-* ").strip()
+                if "|" in cert:
+                    cert_parts = [p.strip() for p in cert.split("|")]
+                    name = cert_parts[0] if len(cert_parts) > 0 else ""
+                    issuer = cert_parts[1] if len(cert_parts) > 1 else ""
+                    date = cert_parts[2] if len(cert_parts) > 2 else ""
+                    text = f"{name} – {issuer} ({date})"
+                else:
+                    text = cert
 
-    # 7. Certifications
-    certs_content = sections.get("CERTIFICATIONS")
-    if certs_content:
-        cert_title_p = doc.add_paragraph()
-        cert_title_p.paragraph_format.space_before = Pt(10)
-        cert_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(cert_title_p)
-        title_run = cert_title_p.add_run("CERTIFICATIONS")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+                cert_p = doc.add_paragraph(style='List Bullet')
+                cert_p.paragraph_format.space_after = Pt(2)
+                cert_run = cert_p.add_run(text)
+                apply_font_settings(cert_run, size_pt=10)
 
-        lines = certs_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            cert = line.lstrip("-* ").strip()
-            if "|" in cert:
-                parts = [p.strip() for p in cert.split("|")]
-                name = parts[0] if len(parts) > 0 else ""
-                issuer = parts[1] if len(parts) > 1 else ""
-                date = parts[2] if len(parts) > 2 else ""
-                text = f"{name} – {issuer} ({date})"
-            else:
-                text = cert
+        elif "VOLUNTEER" in section_name:
+            vol_title_p = doc.add_paragraph()
+            vol_title_p.paragraph_format.space_before = Pt(10)
+            vol_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(vol_title_p)
+            title_run = vol_title_p.add_run("VOLUNTEER EXPERIENCE")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-            cert_p = doc.add_paragraph(style='List Bullet')
-            cert_p.paragraph_format.space_after = Pt(2)
-            cert_run = cert_p.add_run(text)
-            apply_font_settings(cert_run, size_pt=10)
+            lines = section_content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("-") or line.startswith("*"):
+                    bullet = line.lstrip("-* ").strip()
+                    bullet_p = doc.add_paragraph(style='List Bullet')
+                    bullet_p.paragraph_format.space_after = Pt(2)
+                    bullet_p.paragraph_format.line_spacing = 1.1
+                    bullet_run = bullet_p.add_run(bullet)
+                    apply_font_settings(bullet_run, size_pt=10)
+                elif "|" in line:
+                    vol_parts = [p.strip() for p in line.split("|")]
+                    role = vol_parts[0] if len(vol_parts) > 0 else ""
+                    org = vol_parts[1] if len(vol_parts) > 1 else ""
+                    duration = vol_parts[2] if len(vol_parts) > 2 else ""
 
-    # 8. Volunteer Work
-    vol_content = sections.get("VOLUNTEER") or sections.get("VOLUNTEER EXPERIENCE")
-    if vol_content:
-        vol_title_p = doc.add_paragraph()
-        vol_title_p.paragraph_format.space_before = Pt(10)
-        vol_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(vol_title_p)
-        title_run = vol_title_p.add_run("VOLUNTEER EXPERIENCE")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
+                    vol_p = doc.add_paragraph()
+                    vol_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
+                    vol_p.paragraph_format.space_before = Pt(3)
+                    vol_p.paragraph_format.space_after = Pt(1)
 
-        lines = vol_content.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("-") or line.startswith("*"):
-                bullet = line.lstrip("-* ").strip()
-                bullet_p = doc.add_paragraph(style='List Bullet')
-                bullet_p.paragraph_format.space_after = Pt(2)
-                bullet_p.paragraph_format.line_spacing = 1.1
-                bullet_run = bullet_p.add_run(bullet)
-                apply_font_settings(bullet_run, size_pt=10)
-            elif "|" in line:
-                parts = [p.strip() for p in line.split("|")]
-                role = parts[0] if len(parts) > 0 else ""
-                org = parts[1] if len(parts) > 1 else ""
-                duration = parts[2] if len(parts) > 2 else ""
+                    role_org = f"{role} – {org}"
+                    role_run = vol_p.add_run(role_org)
+                    apply_font_settings(role_run, size_pt=10.5, bold=True)
 
-                vol_p = doc.add_paragraph()
-                vol_p.paragraph_format.tab_stops.add_tab_stop(right_tab_stop_position, WD_TAB_ALIGNMENT.RIGHT)
-                vol_p.paragraph_format.space_before = Pt(3)
-                vol_p.paragraph_format.space_after = Pt(1)
+                    duration_run = vol_p.add_run(f"\t{duration}")
+                    apply_font_settings(duration_run, size_pt=10, bold=True)
 
-                role_org = f"{role} – {org}"
-                role_run = vol_p.add_run(role_org)
-                apply_font_settings(role_run, size_pt=10.5, bold=True)
+        elif "LANGUAGE" in section_name:
+            lang_title_p = doc.add_paragraph()
+            lang_title_p.paragraph_format.space_before = Pt(10)
+            lang_title_p.paragraph_format.space_after = Pt(4)
+            add_bottom_border(lang_title_p)
+            title_run = lang_title_p.add_run("LANGUAGES")
+            apply_font_settings(title_run, size_pt=11.5, bold=True)
 
-                duration_run = vol_p.add_run(f"\t{duration}")
-                apply_font_settings(duration_run, size_pt=10, bold=True)
+            lines = section_content.split("\n")
+            lang_strings = []
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                lang_item = line.lstrip("-* ").strip()
+                if "|" in lang_item:
+                    lang_parts = [p.strip() for p in lang_item.split("|")]
+                    lang_strings.append(f"{lang_parts[0]} ({lang_parts[1]})")
+                else:
+                    lang_strings.append(lang_item)
 
-    # 9. Languages
-    lang_content = sections.get("LANGUAGES")
-    if lang_content:
-        lang_title_p = doc.add_paragraph()
-        lang_title_p.paragraph_format.space_before = Pt(10)
-        lang_title_p.paragraph_format.space_after = Pt(4)
-        add_bottom_border(lang_title_p)
-        title_run = lang_title_p.add_run("LANGUAGES")
-        apply_font_settings(title_run, size_pt=11.5, bold=True)
-
-        lines = lang_content.split("\n")
-        lang_strings = []
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            lang_item = line.lstrip("-* ").strip()
-            if "|" in lang_item:
-                parts = [p.strip() for p in lang_item.split("|")]
-                lang_strings.append(f"{parts[0]} ({parts[1]})")
-            else:
-                lang_strings.append(lang_item)
-
-        lang_p = doc.add_paragraph()
-        lang_p.paragraph_format.space_after = Pt(8)
-        lang_run = lang_p.add_run(", ".join(lang_strings))
-        apply_font_settings(lang_run, size_pt=10)
+            lang_p = doc.add_paragraph()
+            lang_p.paragraph_format.space_after = Pt(8)
+            lang_run = lang_p.add_run(", ".join(lang_strings))
+            apply_font_settings(lang_run, size_pt=10)
 
     # Make parent directories if they don't exist
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
