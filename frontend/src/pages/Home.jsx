@@ -123,17 +123,17 @@ function Home({ onLogout }) {
         )}
 
         {/* Dashboard Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           
           {/* Left Column (Inputs & Generation) */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className="flex flex-col gap-6">
             <JDInput
               jd={jd}
               setJd={setJd}
               disabled={isGenerating}
             />
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
               <GenerateButton
                 onClick={handleGenerate}
                 disabled={isGenerating || !jd.trim()}
@@ -144,7 +144,7 @@ function Home({ onLogout }) {
           </div>
 
           {/* Right Column (Q&A Panel) */}
-          <div className="lg:col-span-5">
+          <div className="flex flex-col">
             <QAPanel
               qaList={qaList}
               onSendQuestion={handleSendQuestion}

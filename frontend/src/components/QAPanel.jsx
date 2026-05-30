@@ -1,5 +1,53 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, MessageSquareCode } from 'lucide-react';
+import { Send, Bot, User, MessageSquareCode, Copy, Check } from 'lucide-react';
+
+/* ── Isolated copy-button component with its own "copied" state ── */
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* fallback for non-secure contexts */
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={copied ? 'Copied!' : 'Copy to clipboard'}
+      className={`
+        absolute top-2 right-2 p-1 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100
+        ${copied
+          ? 'bg-emerald-100 text-emerald-600'
+          : 'bg-indigo-100/60 text-indigo-400 hover:bg-indigo-200/80 hover:text-indigo-600'}
+      `}
+    >
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+/* ── AI answer bubble with embedded copy button ── */
+function AnswerBubble({ answer }) {
+  return (
+    <div className="relative group bg-indigo-50/70 border border-indigo-100/30 text-slate-800 p-3 pr-8 rounded-2xl rounded-tl-none text-sm font-medium whitespace-pre-wrap">
+      {answer}
+      <CopyButton text={answer} />
+    </div>
+  );
+}
 
 function QAPanel({ qaList, onSendQuestion, isLoading }) {
   const [question, setQuestion] = useState('');
@@ -67,9 +115,7 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
                   <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-full flex-shrink-0 mt-1">
                     <Bot className="w-3.5 h-3.5" />
                   </div>
-                  <div className="bg-indigo-50/70 border border-indigo-100/30 text-slate-800 p-3 rounded-2xl rounded-tl-none text-sm font-medium whitespace-pre-wrap select-all hover:bg-indigo-50 transition-colors cursor-pointer" title="Click to copy answer">
-                    {item.answer}
-                  </div>
+                  <AnswerBubble answer={item.answer} />
                 </div>
               </div>
             </div>
