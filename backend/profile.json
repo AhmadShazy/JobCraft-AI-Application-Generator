@@ -1,0 +1,106 @@
+{
+  "name": "Ahmad Sheraz",
+  "email": "ahmadshazy098@gmail.com",
+  "phone": "+92-3287537973",
+  "location": "Lahore, Pakistan",
+  "linkedin": "linkedin.com/in/ahmadshazy",
+  "github": "github.com/AhmadShazy",
+  "education": [
+    {
+      "degree": "BS Computer Science",
+      "institution": "COMSATS University Islamabad, Lahore Campus",
+      "duration": "Sep 2023 – Present",
+      "note": "6th Semester"
+    },
+    {
+      "degree": "Intermediate – Pre-Engineering",
+      "institution": "Government College University (GCU), Lahore",
+      "duration": "Nov 2021 – Jul 2023"
+    }
+  ],
+  "experience": [
+    {
+      "title": "Web Developer Intern",
+      "company": "WEBBUGGS",
+      "location": "Johar Town, Lahore",
+      "duration": "Jul 2025 – Aug 2025",
+      "bullets": [
+        "Developed responsive web pages using HTML, CSS, and JavaScript",
+        "Managed and optimized MongoDB databases",
+        "Built and maintained client WordPress websites",
+        "Collaborated on testing, debugging, and delivery under deadlines"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "LUMINA — Emotionally Intelligent Virtual Assistant",
+      "type": "Final Year Project",
+      "duration": "Jan 2025 – Present",
+      "stack": "Python, FastAPI, OpenAI Whisper, SpeechBrain, MongoDB, ONNX Runtime, Hugging Face, AWS, WebGL",
+      "bullets": [
+        "Built multimodal emotion detection pipeline integrating speech, text, and facial analysis",
+        "Developed FastAPI REST backend with real-time streaming",
+        "Supervised by Dr. Usama Ijaz Bajwa, COMSATS University Islamabad"
+      ]
+    },
+    {
+      "name": "Intelligent Emotion Detection System",
+      "duration": "Jan 2025 – Present",
+      "stack": "Python, FastAPI, MongoDB, OpenAI Whisper, NLP, HTML/CSS/JS",
+      "bullets": [
+        "Built full stack emotion analysis platform with FastAPI and Vanilla JS",
+        "Integrated third-party AI APIs for speech and text emotion detection",
+        "Implemented real-time streaming pipeline with interactive dashboards"
+      ]
+    },
+    {
+      "name": "AI Face Recognition Attendance System",
+      "duration": "Oct 2025 – Dec 2025",
+      "stack": "Python, OpenCV (LBPH), NumPy, Pillow, MySQL",
+      "bullets": [
+        "Developed real-time biometric attendance system using Haar Cascade and LBPH",
+        "Engineered automated MySQL attendance logging pipeline"
+      ]
+    },
+    {
+      "name": "Income Predictor — ML Pipeline",
+      "duration": "Sep 2025 – Oct 2025",
+      "stack": "Python, Scikit-Learn, Pandas, NumPy, Matplotlib, Jupyter Notebook",
+      "bullets": [
+        "Built end-to-end classification pipeline on 48K+ records",
+        "Performed EDA, feature engineering, PCA, and multi-model evaluation"
+      ]
+    },
+    {
+      "name": "E-Commerce Backend Platform",
+      "duration": "Aug 2025 – Sep 2025",
+      "stack": "Node.js, Express.js, MongoDB, Tailwind CSS, EJS, Git",
+      "bullets": [
+        "Architected MVC backend with role-based authentication",
+        "Built custom JSON database engine and shopping cart system"
+      ]
+    }
+  ],
+  "skills": {
+    "languages": ["Python", "JavaScript", "SQL", "C++", "HTML", "CSS"],
+    "ai_ml": ["Scikit-Learn", "OpenCV", "OpenAI Whisper", "SpeechBrain", "Hugging Face", "ONNX Runtime", "Pandas", "NumPy"],
+    "backend": ["FastAPI", "Node.js", "Express.js", "REST APIs"],
+    "databases": ["MySQL", "MongoDB"],
+    "tools": ["Git", "Docker (Beginner)", "AWS (Beginner)", "Cursor AI", "Claude", "VSCode", "WordPress"],
+    "concepts": ["Computer Vision", "Multimodal AI", "MVC", "API Integration", "Emotion Detection"]
+  },
+  "certifications": [
+    "Supervised Machine Learning — Stanford/Coursera (Aug 2025)",
+    "Introduction to AI — IBM (Jul 2025)",
+    "Introduction to Programming with Python — Harvard/EDX (Dec 2024)"
+  ],
+  "volunteer": [
+    "C++ Instructor, COMSATS University Programming Community (Sep–Dec 2024)"
+  ],
+  "extracurriculars": [
+    "ACM COMSATS Capture Crew — Cinematographer (2024)",
+    "ACM COMSATS 404 Squad — Event Organizer (2024)"
+  ],
+  "languages": ["English (Proficient)", "Urdu (Native)"]
+}
