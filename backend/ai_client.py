@@ -11,12 +11,11 @@ load_dotenv()
 # hard errors (bad key, malformed prompt, etc.) stop immediately.
 # ─────────────────────────────────────────────────────────────
 GEMINI_MODEL_CHAIN = [
-    "gemini-3.5-flash",        # highest quality — try first
-    "gemini-3.1-flash-lite",   # step 2
-    "gemini-2.5-flash",        # step 3
-    "gemini-2.5-flash-lite",   # step 4
-    "gemini-2.0-flash",        # step 5 — reliable fallback
-    "gemini-2.0-flash-lite",   # last resort
+    "gemini-3.5-flash",         # highest quality — try first
+    "gemini-3.0-flash",         # step 2
+    "gemini-3.1-flash-lite",    # step 3
+    "gemini-2.5-flash",         # step 4
+    "gemini-2.5-flash-lite",    # last resort
 ]
 
 # Patterns that indicate a transient / quota / availability error → try next model.
