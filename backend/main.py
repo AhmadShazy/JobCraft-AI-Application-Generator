@@ -18,6 +18,8 @@ from backend.prompts import (
 )
 from backend.ai_client import GeminiClient, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
+from backend.database import connect_to_mongo, close_mongo_connection
+
 
 # ─────────────────────────────────────────────
 # Path constants (resolved relative to this file)
@@ -69,9 +71,16 @@ async def lifespan(app: FastAPI):
         app.state.profile_data = None
         app.state.profile_str  = None
 
+    # Connect to MongoDB
+    try:
+        await connect_to_mongo()
+    except Exception as e:
+        print(f"[mongodb startup ERROR] Could not connect to MongoDB: {e}")
+
     yield  # server is running here
 
-    # ── SHUTDOWN ── (nothing to clean up)
+    # ── SHUTDOWN ──
+    await close_mongo_connection()
 
 
 # ─────────────────────────────────────────────

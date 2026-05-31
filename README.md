@@ -16,14 +16,26 @@ JobCraft AI is a local web application designed to automate the process of tailo
 
 Follow these instructions to run the application locally.
 
-### 1. API Key Configuration
-1. Open the file `backend/.env`.
-2. Replace the placeholder value with your actual Gemini API Key:
+### 1. Environment & API Key Configuration
+1. Copy `.env.example` at the root folder to create a new file named `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open the root `.env` file and configure the settings, including your **Gemini API Key** and a secure **JWT Secret Key**:
    ```env
-   GEMINI_API_KEY=your_actual_api_key_here
+   GEMINI_API_KEY=your_actual_gemini_api_key
+   JWT_SECRET=your_custom_secure_hex_secret
    ```
 
-### 2. Start the Backend Server (FastAPI)
+### 2. Start MongoDB Database (Docker)
+1. Ensure Docker Desktop is installed and running.
+2. In the root directory of the project, spin up the local MongoDB instance:
+   ```bash
+   docker-compose up -d
+   ```
+   MongoDB will start running on port `27017` in the background.
+
+### 3. Start the Backend Server (FastAPI)
 Open a terminal in the root folder of the project (`JobCraft-AI_Appliction-Generator`) and run:
 
 1. **Activate the Python Virtual Environment:**
@@ -48,7 +60,7 @@ Open a terminal in the root folder of the project (`JobCraft-AI_Appliction-Gener
 
 ---
 
-### 3. Start the Frontend App (React + Vite)
+### 4. Start the Frontend App (React + Vite)
 Open a **second** terminal window in the root folder of the project and run:
 
 1. **Navigate to the frontend folder:**
@@ -64,7 +76,7 @@ Open a **second** terminal window in the root folder of the project and run:
 
 ---
 
-### 4. Local Files & Data Security
+### 5. Local Files & Data Security
 * **Candidate Profile (`backend/profile.json`):** Contains the candidate's core credentials (education, experience, projects, skills). Modify this file directly to update your background information.
 * **Application History (`backend/history.json`):** Tracks past applications (company names, generation dates, and pasted JDs) for local download recovery. This file is **created automatically** by the backend upon your first generation. It is listed in `.gitignore` to prevent exposing your private application logs on GitHub.
 
