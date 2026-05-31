@@ -4,7 +4,7 @@ import uuid
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -19,6 +19,9 @@ from backend.prompts import (
 from backend.ai_client import GeminiClient, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
 from backend.database import connect_to_mongo, close_mongo_connection
+from backend.routers.auth_router import router as auth_router
+from backend.dependencies import get_current_user
+
 
 
 # ─────────────────────────────────────────────
@@ -95,6 +98,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+
+@app.get("/auth/verify")
+def verify_session(current_user: dict = Depends(get_current_user)):
+    return {
+        "status": "authenticated",
+        "user_id": current_user["_id"],
+        "email": current_user["email"]
+    }
+
 
 
 # ─────────────────────────────────────────────
