@@ -1,10 +1,10 @@
 import os
 import json
-import uuid
 import re
 from contextlib import asynccontextmanager
-from datetime import datetime
-from fastapi import FastAPI, HTTPException, Request, Depends
+from datetime import datetime, timezone
+from bson import ObjectId
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -18,48 +18,18 @@ from backend.prompts import (
 )
 from backend.ai_client import GeminiClient, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
-from backend.database import connect_to_mongo, close_mongo_connection
+from backend.database import connect_to_mongo, close_mongo_connection, get_database
 from backend.routers.auth_router import router as auth_router
 from backend.routers.profile_router import router as profile_router
 from backend.dependencies import get_current_user
-
-
-
 
 # ─────────────────────────────────────────────
 # Path constants (resolved relative to this file)
 # ─────────────────────────────────────────────
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
-PROFILE_PATH = os.path.join(BASE_DIR, "profile.json")
-HISTORY_PATH = os.path.join(BASE_DIR, "history.json")
 OUTPUTS_DIR  = os.path.join(BASE_DIR, "outputs")
 
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
-
-
-# ─────────────────────────────────────────────
-# Profile loader — called once at startup and
-# again by POST /reload-profile
-# ─────────────────────────────────────────────
-def _load_profile(app: FastAPI) -> None:
-    """
-    Reads profile.json, stores the raw dict in app.state.profile_data
-    and the pre-formatted text in app.state.profile_str.
-    Raises RuntimeError if the file is missing or unparseable.
-    """
-    if not os.path.exists(PROFILE_PATH):
-        raise RuntimeError(f"profile.json not found at {PROFILE_PATH}")
-
-    with open(PROFILE_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    app.state.profile_data = data
-    # Pre-format once; reused by all endpoints
-    app.state.profile_str  = json.dumps(data, indent=2)
-    print(
-        f"[startup] Profile loaded — {data.get('name', 'unknown')} | "
-        f"{len(app.state.profile_str)} chars"
-    )
 
 
 # ─────────────────────────────────────────────
@@ -68,14 +38,6 @@ def _load_profile(app: FastAPI) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── STARTUP ──
-    try:
-        _load_profile(app)
-    except RuntimeError as e:
-        # Log clearly; server still starts so /reload-profile can fix it later
-        print(f"[startup ERROR] {e}")
-        app.state.profile_data = None
-        app.state.profile_str  = None
-
     # Connect to MongoDB
     try:
         await connect_to_mongo()
@@ -113,7 +75,6 @@ def verify_session(current_user: dict = Depends(get_current_user)):
     }
 
 
-
 # ─────────────────────────────────────────────
 # Request schemas
 # ─────────────────────────────────────────────
@@ -147,26 +108,13 @@ def detect_company_name(jd: str) -> str:
         return "unknown"
 
 
-def sanitize_filename(name: str) -> str:
-    """Removes invalid filename characters and replaces spaces with underscores."""
-    clean = re.sub(r'[^a-zA-Z0-9\s\-_]', '', name).strip().replace(' ', '_')
-    return clean if clean else "Company"
-
-
-def _require_profile(request: Request):
-    """
-    Returns (profile_data, profile_str) from app.state.
-    Raises HTTP 503 if the profile was not loaded at startup.
-    """
-    if request.app.state.profile_data is None:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Candidate profile is not loaded. "
-                "Check that profile.json exists and call POST /reload-profile."
-            )
-        )
-    return request.app.state.profile_data, request.app.state.profile_str
+def sanitize_for_filename(name: str) -> str:
+    """Strips special characters and replaces spaces with hyphens."""
+    # Strip special characters: keep letters, numbers, spaces, hyphens
+    clean = re.sub(r'[^a-zA-Z0-9\s\-]', '', name)
+    # Replace whitespace and hyphens with single hyphen
+    clean = re.sub(r'[\s\-]+', '-', clean).strip('-')
+    return clean
 
 
 # ─────────────────────────────────────────────
@@ -174,8 +122,15 @@ def _require_profile(request: Request):
 # ─────────────────────────────────────────────
 
 @app.post("/generate")
-def generate_documents(payload: GenerateRequest, request: Request):
-    profile_data, profile_str = _require_profile(request)
+async def generate_documents(payload: GenerateRequest, current_user: dict = Depends(get_current_user)):
+    profile_data = current_user.get("profile", {})
+    if not profile_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Candidate profile data is empty. Please configure your profile first."
+        )
+
+    profile_str = json.dumps(profile_data, indent=2)
 
     try:
         client = GeminiClient()
@@ -206,15 +161,26 @@ def generate_documents(payload: GenerateRequest, request: Request):
         except Exception as e:
             print(f"Failed to parse cover letter JSON. Raw output:\n{raw_cl}")
             raise HTTPException(
-                status_code=500,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to parse AI-generated cover letter JSON: {e}"
             )
 
         # 4. File names
-        date_str     = datetime.now().strftime("%Y-%m-%d")
-        safe_company = sanitize_filename(company_name)
-        resume_filename = f"Ahmad-Sheraz_{safe_company}_{date_str}.docx"
-        cl_filename     = f"CoverLetter_Ahmad-Sheraz_{safe_company}_{date_str}.docx"
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        
+        name_val = profile_data.get("name")
+        safe_name = ""
+        if name_val:
+            safe_name = sanitize_for_filename(name_val)
+        if not safe_name:
+            safe_name = str(current_user["_id"])
+            
+        safe_company = sanitize_for_filename(company_name)
+        if not safe_company:
+            safe_company = "unknown"
+            
+        resume_filename = f"{safe_name}_{safe_company}_{date_str}.docx"
+        cl_filename     = f"CoverLetter_{safe_name}_{safe_company}_{date_str}.docx"
         resume_filepath = os.path.join(OUTPUTS_DIR, resume_filename)
         cl_filepath     = os.path.join(OUTPUTS_DIR, cl_filename)
 
@@ -239,26 +205,16 @@ def generate_documents(payload: GenerateRequest, request: Request):
         )
 
         # 6. History
-        history = []
-        if os.path.exists(HISTORY_PATH):
-            try:
-                with open(HISTORY_PATH, "r", encoding="utf-8") as hf:
-                    history = json.load(hf)
-            except Exception:
-                history = []
-
-        history.insert(0, {
-            "id": str(uuid.uuid4()),
+        db = get_database()
+        await db.history.insert_one({
+            "user_id": ObjectId(current_user["_id"]),
             "company_name": company_name,
             "date": date_str,
             "resume_filename": resume_filename,
             "coverletter_filename": cl_filename,
             "jd": payload.jd,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now(timezone.utc)
         })
-
-        with open(HISTORY_PATH, "w", encoding="utf-8") as hf:
-            json.dump(history, hf, indent=2)
 
         return {
             "resume_url": f"/download/{resume_filename}",
@@ -269,12 +225,19 @@ def generate_documents(payload: GenerateRequest, request: Request):
         raise
     except Exception as e:
         print(f"Error in /generate: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.post("/answer")
-def answer_question(payload: AnswerRequest, request: Request):
-    _, profile_str = _require_profile(request)
+async def answer_question(payload: AnswerRequest, current_user: dict = Depends(get_current_user)):
+    profile_data = current_user.get("profile", {})
+    if not profile_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Candidate profile data is empty. Please configure your profile first."
+        )
+
+    profile_str = json.dumps(profile_data, indent=2)
 
     try:
         client = GeminiClient()
@@ -293,32 +256,32 @@ def answer_question(payload: AnswerRequest, request: Request):
         raise
     except Exception as e:
         print(f"Error in /answer: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/reload-profile")
-def reload_profile(request: Request):
-    """
-    Re-reads profile.json and refreshes app.state without restarting the server.
-    Useful after editing the candidate profile file.
-    """
-    try:
-        _load_profile(request.app)
-        name = request.app.state.profile_data.get("name", "unknown")
-        print(f"[reload-profile] Profile refreshed for: {name}")
-        return {
-            "status": "ok",
-            "message": f"Profile reloaded successfully for {name}."
-        }
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.get("/download/{filename}")
-def download_file(filename: str):
+async def download_file(filename: str, current_user: dict = Depends(get_current_user)):
+    db = get_database()
+    
+    # Query history to see if this user has generated this file
+    log = await db.history.find_one({
+        "user_id": ObjectId(current_user["_id"]),
+        "$or": [
+            {"resume_filename": filename},
+            {"coverletter_filename": filename}
+        ]
+    })
+    
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to download this file."
+        )
+
     filepath = os.path.join(OUTPUTS_DIR, filename)
     if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="File not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found.")
+        
     return FileResponse(
         path=filepath,
         filename=filename,
@@ -326,19 +289,25 @@ def download_file(filename: str):
     )
 
 
-@app.get("/profile")
-def get_profile(request: Request):
-    if request.app.state.profile_data is None:
-        raise HTTPException(status_code=503, detail="Profile not loaded. Call POST /reload-profile.")
-    return request.app.state.profile_data
-
-
 @app.get("/history")
-def get_history():
-    if not os.path.exists(HISTORY_PATH):
-        return []
+async def get_history(current_user: dict = Depends(get_current_user)):
+    db = get_database()
     try:
-        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
+        cursor = db.history.find({"user_id": ObjectId(current_user["_id"])}).sort("created_at", -1)
+        history_records = await cursor.to_list(length=100)
+        
+        formatted_history = []
+        for record in history_records:
+            formatted_history.append({
+                "id": str(record["_id"]),
+                "company_name": record.get("company_name", ""),
+                "date": record.get("date", ""),
+                "resume_filename": record.get("resume_filename", ""),
+                "coverletter_filename": record.get("coverletter_filename", ""),
+                "jd": record.get("jd", ""),
+                "created_at": record.get("created_at").isoformat() if isinstance(record.get("created_at"), datetime) else record.get("created_at", "")
+            })
+        return formatted_history
+    except Exception as e:
+        print(f"Error fetching history: {e}")
         return []
