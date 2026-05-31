@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { verifySession, loginUser, signupUser, logoutUser, getMyProfile } from '../api/client';
+import { useToast } from './ToastContext';
 
 const AuthContext = createContext(null);
 
@@ -8,6 +9,13 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signupCredentials, setSignupCredentials] = useState(null);
+  const { addToast } = useToast();
+
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   const checkAuth = async () => {
     try {
@@ -30,6 +38,9 @@ export function AuthProvider({ children }) {
     checkAuth();
     // Register global handler for axios auth failures (silent refresh failures)
     window.handleAuthFailure = () => {
+      if (isAuthenticatedRef.current) {
+        addToast("Your session has expired. Please log in again.", "error");
+      }
       setUser(null);
       setIsAuthenticated(false);
       setProfileComplete(false);
@@ -37,15 +48,17 @@ export function AuthProvider({ children }) {
     return () => {
       window.handleAuthFailure = null;
     };
-  }, []);
+  }, [addToast]);
 
   const login = async (email, password) => {
     await loginUser(email, password);
+    setSignupCredentials(null); // Clear signup pre-fill upon explicit login
     await checkAuth();
   };
 
   const signup = async (email, password) => {
     await signupUser(email, password);
+    setSignupCredentials({ email, password });
     await checkAuth();
   };
 
@@ -61,7 +74,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, profileComplete, setProfileComplete, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, profileComplete, setProfileComplete, loading, login, signup, logout, signupCredentials, setSignupCredentials }}>
       {children}
     </AuthContext.Provider>
   );

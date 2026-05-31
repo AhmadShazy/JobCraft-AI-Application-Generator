@@ -1,13 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { normalizeProfile, saveProfile } from '../api/client';
 import { User, BookOpen, FileText, CheckSquare, Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react';
 
+const CATEGORY_LABELS = {
+  languages: 'Languages',
+  ai_ml: 'AI / ML',
+  backend_and_apis: 'Backend & APIs',
+  databases: 'Databases',
+  tools_and_platforms: 'Tools & Platforms',
+  concepts: 'Concepts',
+};
+
 function ProfileSetup() {
-  const { setProfileComplete } = useAuth();
+  const { setProfileComplete, logout } = useAuth();
+  const { addToast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const handleBackToCredentials = async () => {
+    setLoading(true);
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to return to credentials screen.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Normalized profile preview state
   const [normalizedPreview, setNormalizedPreview] = useState(null);
@@ -44,7 +66,6 @@ function ProfileSetup() {
   // Handle Basic Info inputs
   const handleBasicChange = (e) => {
     setBasicInfo({ ...basicInfo, [e.target.name]: e.target.value });
-    setError('');
   };
 
   // Add/Remove Languages
@@ -71,14 +92,13 @@ function ProfileSetup() {
     const updated = [...educations];
     updated[index][field] = value;
     setEducations(updated);
-    setError('');
   };
 
   // Step 1 Validation
   const validateStep1 = () => {
     const { name, email, phone, location } = basicInfo;
     if (!name.trim() || !email.trim() || !phone.trim() || !location.trim()) {
-      setError('Please fill in all required basic fields (Name, Email, Phone, Location).');
+      addToast('Please fill in all required fields before continuing.', 'error');
       return false;
     }
     return true;
@@ -88,7 +108,7 @@ function ProfileSetup() {
   const validateStep2 = () => {
     const valid = educations.every(edu => edu.institution.trim() && edu.degree.trim() && edu.duration.trim());
     if (!valid || educations.length === 0) {
-      setError('Please enter at least one valid education entry (Institution, Degree, and Duration are required).');
+      addToast('Please fill in all required fields before continuing.', 'error');
       return false;
     }
     return true;
@@ -96,7 +116,6 @@ function ProfileSetup() {
 
   // Proceed steps
   const nextStep = () => {
-    setError('');
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
     
@@ -109,14 +128,12 @@ function ProfileSetup() {
   };
 
   const prevStep = () => {
-    setError('');
     setStep(step - 1);
   };
 
   // Normalize profile via Gemini
   const triggerNormalization = async () => {
     setLoading(true);
-    setError('');
     try {
       // Assemble languages into basic info payload or pass separately
       const payload = {
@@ -137,9 +154,10 @@ function ProfileSetup() {
       setNormalizedPreview(result);
     } catch (err) {
       console.error(err);
-      setError(
+      addToast(
         err.response?.data?.detail || 
-        'Gemini normalization failed. Please return to Step 3 and clarify your inputs.'
+        'Gemini normalization failed. Please return to Step 3 and clarify your inputs.',
+        'error'
       );
       setStep(3); // bounce back to text fields on normalization error
     } finally {
@@ -156,69 +174,65 @@ function ProfileSetup() {
       setProfileComplete(true); // Redirection triggered via App.jsx state
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to save candidate profile details.');
+      addToast(err.response?.data?.detail || 'Failed to save candidate profile details.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center py-10 px-4 select-none relative overflow-y-auto">
+    <div className="h-screen w-full bg-slate-950 text-slate-100 flex flex-col select-none relative overflow-hidden">
       
       {/* Background Accent */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-60 bg-gradient-to-b from-indigo-950/20 to-transparent blur-3xl pointer-events-none"></div>
 
-      {/* Title */}
-      <div className="text-center mb-8 relative z-10">
-        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary-400 to-indigo-300 bg-clip-text text-transparent flex items-center justify-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary-400" />
-          Candidate Profile setup
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Let's build your professional profile. v2.0</p>
+      {/* Header section (fixed at top): Title + Stepper */}
+      <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-2 flex-shrink-0 z-10">
+        {/* Title */}
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-primary-400 to-indigo-300 bg-clip-text text-transparent flex items-center justify-center gap-2">
+            <Sparkles className="w-5.5 h-5.5 text-primary-400" />
+            Candidate Profile setup
+          </h1>
+          <p className="text-slate-400 text-xs mt-0.5">Let's build your professional profile. v2.0</p>
+        </div>
+
+        {/* Progress Stepper */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'Basic Info', icon: User },
+            { label: 'Education', icon: BookOpen },
+            { label: 'Background Detail', icon: FileText },
+            { label: 'AI Review', icon: CheckSquare },
+          ].map((s, idx) => {
+            const Icon = s.icon;
+            const active = step === idx + 1;
+            const completed = step > idx + 1;
+            return (
+              <div 
+                key={idx}
+                className={`flex flex-col items-center py-2 rounded-xl border transition-all duration-200 ${
+                  active 
+                    ? 'bg-primary-950/20 border-primary-500/80 shadow-md text-primary-300' 
+                    : completed 
+                    ? 'bg-slate-900/40 border-slate-800 text-emerald-400' 
+                    : 'bg-slate-900/10 border-slate-900 text-slate-500'
+                }`}
+              >
+                <Icon className="w-4 h-4 mb-0.5" />
+                <span className="text-[11px] font-bold hidden md:inline">{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Progress Stepper */}
-      <div className="w-full max-w-4xl grid grid-cols-4 gap-2 mb-8 relative z-10">
-        {[
-          { label: 'Basic Info', icon: User },
-          { label: 'Education', icon: BookOpen },
-          { label: 'Background Detail', icon: FileText },
-          { label: 'AI Review', icon: CheckSquare },
-        ].map((s, idx) => {
-          const Icon = s.icon;
-          const active = step === idx + 1;
-          const completed = step > idx + 1;
-          return (
-            <div 
-              key={idx}
-              className={`flex flex-col items-center py-3 rounded-xl border transition-all duration-200 ${
-                active 
-                  ? 'bg-primary-950/20 border-primary-500/80 shadow-md text-primary-300' 
-                  : completed 
-                  ? 'bg-slate-900/40 border-slate-800 text-emerald-400' 
-                  : 'bg-slate-900/10 border-slate-900 text-slate-500'
-              }`}
-            >
-              <Icon className="w-4 h-4 mb-1" />
-              <span className="text-xs font-bold hidden md:inline">{s.label}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Card Body */}
-      <div className="w-full max-w-4xl bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-xl p-8 relative z-10 mb-8 min-h-[420px] flex flex-col justify-between">
-        
-        {/* Error notification */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-950/40 border-l-4 border-red-500 rounded-xl text-red-400 text-sm font-semibold flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Step Views */}
-        <div className="flex-1">
+      {/* Middle scrollable content area */}
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 overflow-y-auto z-10 pb-6 pt-2">
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-xl p-6 md:p-8 min-h-full">
+          
+          {/* Step Views */}
+          <div className="h-full">
           
           {/* STEP 1: BASIC INFO */}
           {step === 1 && (
@@ -228,35 +242,35 @@ function ProfileSetup() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Full Name *</label>
-                  <input type="text" name="name" value={basicInfo.name} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. Ahmad Sheraz" />
+                  <input type="text" name="name" value={basicInfo.name} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. Ahmad Sheraz" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Email Address *</label>
-                  <input type="email" name="email" value={basicInfo.email} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. email@example.com" />
+                  <input type="email" name="email" value={basicInfo.email} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. email@example.com" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Phone Number *</label>
-                  <input type="text" name="phone" value={basicInfo.phone} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. +92-3287537973" />
+                  <input type="text" name="phone" value={basicInfo.phone} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. +92-3287537973" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Location (City, Country) *</label>
-                  <input type="text" name="location" value={basicInfo.location} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. Lahore, Pakistan" />
+                  <input type="text" name="location" value={basicInfo.location} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. Lahore, Pakistan" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">LinkedIn URL</label>
-                  <input type="text" name="linkedin" value={basicInfo.linkedin} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="linkedin.com/in/username" />
+                  <input type="text" name="linkedin" value={basicInfo.linkedin} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="linkedin.com/in/username" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">GitHub URL</label>
-                  <input type="text" name="github" value={basicInfo.github} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="github.com/username" />
+                  <input type="text" name="github" value={basicInfo.github} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="github.com/username" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Portfolio Website</label>
-                  <input type="text" name="portfolio" value={basicInfo.portfolio} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. testuser.dev" />
+                  <input type="text" name="portfolio" value={basicInfo.portfolio} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. testuser.dev" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-400">Headline / Tagline</label>
-                  <input type="text" name="tagline" value={basicInfo.tagline} onChange={handleBasicChange} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-200 text-sm font-medium" placeholder="e.g. AI/ML Engineer | Backend Developer" />
+                  <input type="text" name="tagline" value={basicInfo.tagline} onChange={handleBasicChange} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. AI/ML Engineer | Backend Developer" />
                 </div>
               </div>
 
@@ -310,25 +324,25 @@ function ProfileSetup() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-400">Institution Name *</label>
-                        <input type="text" value={edu.institution} onChange={(e) => handleEducationChange(idx, 'institution', e.target.value)} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium focus:outline-none" placeholder="e.g. COMSATS University Islamabad" />
+                        <input type="text" value={edu.institution} onChange={(e) => handleEducationChange(idx, 'institution', e.target.value)} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. COMSATS University Islamabad" />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-400">Degree *</label>
-                          <input type="text" value={edu.degree} onChange={(e) => handleEducationChange(idx, 'degree', e.target.value)} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium focus:outline-none" placeholder="e.g. BS" />
+                          <input type="text" value={edu.degree} onChange={(e) => handleEducationChange(idx, 'degree', e.target.value)} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. BS" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-400">Field of Study</label>
-                          <input type="text" value={edu.field} onChange={(e) => handleEducationChange(idx, 'field', e.target.value)} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium focus:outline-none" placeholder="e.g. Computer Science" />
+                          <input type="text" value={edu.field} onChange={(e) => handleEducationChange(idx, 'field', e.target.value)} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. Computer Science" />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-400">Duration (Start - End) *</label>
-                        <input type="text" value={edu.duration} onChange={(e) => handleEducationChange(idx, 'duration', e.target.value)} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium focus:outline-none" placeholder="e.g. Sep 2023 – Present" />
+                        <input type="text" value={edu.duration} onChange={(e) => handleEducationChange(idx, 'duration', e.target.value)} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. Sep 2023 – Present" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-400">Additional Note (Optional)</label>
-                        <input type="text" value={edu.note} onChange={(e) => handleEducationChange(idx, 'note', e.target.value)} className="w-full py-2 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium focus:outline-none" placeholder="e.g. GPA: 3.8, 6th Semester" />
+                        <input type="text" value={edu.note} onChange={(e) => handleEducationChange(idx, 'note', e.target.value)} className="w-full py-2.5 px-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-transparent transition-all" placeholder="e.g. GPA: 3.8, 6th Semester" />
                       </div>
                     </div>
                   </div>
@@ -410,7 +424,7 @@ function ProfileSetup() {
                   <div className="text-xs text-slate-500 max-w-xs text-center">Parsing unstructured text and categorizing details. Please hold.</div>
                 </div>
               ) : normalizedPreview ? (
-                <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+                <div className="space-y-6">
                   <p className="text-xs text-slate-400">Please review the structured candidate card extracted by Gemini. Any missing sections are highlighted below.</p>
                   
                   {/* Basic Info Preview */}
@@ -432,7 +446,7 @@ function ProfileSetup() {
                         {Object.entries(normalizedPreview.skills).map(([category, list]) => (
                           list && list.length > 0 && (
                             <div key={category} className="flex flex-wrap gap-1.5 items-center">
-                              <span className="text-slate-500 font-bold capitalize">{category.replace('_', ' ')}:</span>
+                              <span className="text-slate-500 font-bold">{CATEGORY_LABELS[category] || category}:</span>
                               {list.map((s, i) => (
                                 <span key={i} className="text-xs px-2 py-0.5 bg-slate-800 rounded-full text-slate-300 font-medium">{s}</span>
                               ))}
@@ -525,12 +539,24 @@ function ProfileSetup() {
             </div>
           )}
 
+          </div>
         </div>
+      </div>
 
-        {/* Wizard Footer Controls */}
-        <div className="flex justify-between items-center border-t border-slate-800 pt-6 mt-6 flex-shrink-0">
+      {/* Footer controls (fixed at bottom of screen) */}
+      <div className="w-full bg-slate-900 border-t border-slate-800 py-4 px-4 z-20 flex-shrink-0">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
-            {step > 1 && step < 4 && (
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={handleBackToCredentials}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Credentials
+              </button>
+            ) : step > 1 && step < 4 ? (
               <button
                 type="button"
                 onClick={prevStep}
@@ -539,8 +565,7 @@ function ProfileSetup() {
               >
                 <ArrowLeft className="w-4 h-4" /> Go Back
               </button>
-            )}
-            {step === 4 && !loading && (
+            ) : step === 4 && !loading ? (
               <button
                 type="button"
                 onClick={() => setStep(3)}
@@ -548,7 +573,7 @@ function ProfileSetup() {
               >
                 <ArrowLeft className="w-4 h-4" /> Edit Details
               </button>
-            )}
+            ) : null}
           </div>
 
           <div>
@@ -574,7 +599,6 @@ function ProfileSetup() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

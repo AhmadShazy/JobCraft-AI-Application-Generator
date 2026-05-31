@@ -6,7 +6,7 @@ import Loader from '../components/Loader';
 import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
 import { generateDocs, answerQuestion, getHistory } from '../api/client';
-import { AlertCircle } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 import ProfileEdit from './ProfileEdit';
 
 
@@ -23,7 +23,7 @@ const triggerDownload = (url) => {
 function Home({ onLogout }) {
   const [jd, setJd] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState('');
+  const { addToast } = useToast();
 
   // History state
   const [historyList, setHistoryList] = useState([]);
@@ -52,11 +52,10 @@ function Home({ onLogout }) {
 
   const handleGenerate = async () => {
     if (!jd.trim()) {
-      setError('Please paste a job description details before generating.');
+      addToast('Please fill in all required fields before continuing.', 'error');
       return;
     }
 
-    setError('');
     setIsGenerating(true);
 
     try {
@@ -75,9 +74,10 @@ function Home({ onLogout }) {
       }
     } catch (err) {
       console.error(err);
-      setError(
+      addToast(
         err.response?.data?.detail || 
-        'Failed to generate application files. Please check if your FastAPI backend server is running and configured with a valid GEMINI_API_KEY.'
+        'Failed to generate application files. Please check if your FastAPI backend server is running and configured with a valid GEMINI_API_KEY.',
+        'error'
       );
     } finally {
       setIsGenerating(false);
@@ -86,11 +86,10 @@ function Home({ onLogout }) {
 
   const handleSendQuestion = async (questionText) => {
     if (!jd.trim()) {
-      setError('Please paste a job description (JD) in the left panel so the assistant has context to tailor the Q&A answer.');
+      addToast('Please fill in all required fields before continuing.', 'error');
       return;
     }
 
-    setError('');
     setIsAnswering(true);
 
     try {
@@ -98,9 +97,10 @@ function Home({ onLogout }) {
       setQaList((prev) => [...prev, { question: questionText, answer: data.answer }]);
     } catch (err) {
       console.error(err);
-      setError(
+      addToast(
         err.response?.data?.detail || 
-        'Failed to get Q&A response from AI. Verify backend status.'
+        'Failed to get Q&A response from AI. Verify backend status.',
+        'error'
       );
     } finally {
       setIsAnswering(false);
@@ -121,25 +121,11 @@ function Home({ onLogout }) {
 
       <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
         
-        {/* Error Alert Display */}
-        {error && (
-          <div className="flex items-start space-x-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-xl text-red-800 text-sm font-semibold animate-fade-in shadow-sm flex-shrink-0">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">{error}</div>
-            <button 
-              onClick={() => setError('')} 
-              className="text-red-400 hover:text-red-600 text-xs font-bold focus:outline-none"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
         {/* Dashboard Workspace — fills all remaining height */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-y-auto lg:overflow-hidden pr-1">
           
           {/* Left Column (Inputs & Generation) */}
-          <div className="flex flex-col gap-4 overflow-hidden">
+          <div className="flex flex-col h-[500px] lg:h-full gap-4 overflow-hidden">
             <JDInput
               jd={jd}
               setJd={setJd}
@@ -156,7 +142,7 @@ function Home({ onLogout }) {
           </div>
 
           {/* Right Column (Q&A Panel) */}
-          <div className="flex flex-col overflow-hidden">
+          <div className="flex flex-col h-[500px] lg:h-full overflow-hidden">
             <QAPanel
               qaList={qaList}
               onSendQuestion={handleSendQuestion}

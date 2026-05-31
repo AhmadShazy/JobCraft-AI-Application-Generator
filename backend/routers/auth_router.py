@@ -21,15 +21,10 @@ class LoginRequest(BaseModel):
 
 def validate_password_strength(password: str):
     """Enforce minimum 8 characters and at least one number."""
-    if len(password) < 8:
+    if len(password) < 8 or not re.search(r"\d", password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long."
-        )
-    if not re.search(r"\d", password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must contain at least one number."
+            detail="Password must be at least 8 characters and include one number."
         )
 
 @router.post("/signup")
@@ -42,7 +37,7 @@ async def signup(payload: SignupRequest, response: Response):
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email already exists."
+            detail="An account with this email already exists. Please log in."
         )
         
     # 2. Validate password
@@ -82,10 +77,15 @@ async def login(payload: LoginRequest, response: Response):
     
     # 1. Fetch user
     user = await db.users.find_one({"email": email_normalized})
-    if not user or not verify_password(payload.password, user["password_hash"]):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password."
+            detail="No account found with this email. Please sign up."
+        )
+    if not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Please try again."
         )
         
     user_id = str(user["_id"])

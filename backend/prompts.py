@@ -13,7 +13,10 @@ def serialize_profile(profile: dict) -> str:
     lines.append("--- EDUCATION ---")
     for edu in profile.get("education", []):
         note_str = f" ({edu['note']})" if edu.get("note") else ""
-        lines.append(f"Degree: {edu.get('degree', '')}")
+        deg = edu.get("degree", "")
+        fld = edu.get("field", "")
+        deg_str = f"{deg} in {fld}" if deg and fld else (deg or fld or "")
+        lines.append(f"Degree: {deg_str}")
         lines.append(f"Institution: {edu.get('institution', '')}")
         lines.append(f"Duration: {edu.get('duration', '')}{note_str}")
         lines.append("")
@@ -374,6 +377,7 @@ Expected JSON Schema:
   "education": [
     {
       "degree": "string",
+      "field": "string or null",
       "institution": "string",
       "duration": "string",
       "note": "string or null"

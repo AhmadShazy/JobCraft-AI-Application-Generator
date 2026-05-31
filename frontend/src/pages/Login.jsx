@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Lock, Mail, Sparkles, Eye, EyeOff, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 
 function Login() {
-  const { login, signup } = useAuth();
+  const { login, signup, signupCredentials } = useAuth();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
   const [showPassword, setShowPassword] = useState(false);
@@ -20,17 +21,26 @@ function Login() {
   const hasNumber = /\d/.test(password);
   const passwordsMatch = activeTab === 'login' || (password === confirmPassword && password.length > 0);
 
+  // Pre-fill signupCredentials if user navigated back from wizard (Phase 3 integration)
+  useEffect(() => {
+    if (signupCredentials?.email) {
+      setEmail(signupCredentials.email);
+      setPassword(signupCredentials.password);
+      setConfirmPassword(signupCredentials.password);
+      setActiveTab('signup');
+    }
+  }, [signupCredentials]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     
     if (activeTab === 'signup') {
       if (!hasMinLength || !hasNumber) {
-        setError('Please satisfy all password strength criteria.');
+        addToast('Password must be at least 8 characters and include one number.', 'error');
         return;
       }
       if (password !== confirmPassword) {
-        setError('Passwords do not match.');
+        addToast('Passwords do not match.', 'error');
         return;
       }
     }
@@ -44,23 +54,31 @@ function Login() {
       }
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.detail || 
-        'An error occurred. Please check your credentials or API connection.'
-      );
+      const detail = err.response?.data?.detail;
+      let errMsg = 'Something went wrong. Please try again.';
+      if (detail) {
+        if (detail.includes('No account found')) {
+          errMsg = 'No account found with this email. Please sign up.';
+        } else if (detail.includes('Incorrect password') || detail.includes('Incorrect email or password')) {
+          errMsg = 'Incorrect email or password. Please try again.';
+        } else {
+          errMsg = detail;
+        }
+      }
+      addToast(errMsg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 p-4 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 p-4 relative overflow-y-auto">
       
       {/* Dynamic Background Accents */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-800 transition-all duration-300 relative z-10">
+      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-800 transition-all duration-300 relative z-10 my-8">
         
         {/* Header Block */}
         <div className="p-8 pb-6 text-center bg-gradient-to-r from-primary-900/80 to-indigo-950/80 text-white relative border-b border-slate-800">
@@ -78,7 +96,6 @@ function Login() {
           <button
             onClick={() => {
               setActiveTab('login');
-              setError('');
             }}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'login'
@@ -91,7 +108,6 @@ function Login() {
           <button
             onClick={() => {
               setActiveTab('signup');
-              setError('');
             }}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'signup'
@@ -105,12 +121,6 @@ function Login() {
 
         {/* Form Block */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {error && (
-            <div className="p-3 bg-red-950/40 border-l-4 border-red-500 rounded-xl text-red-400 text-sm font-semibold flex items-center space-x-2 animate-shake">
-              <ShieldAlert className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
 
           {/* Email field */}
           <div className="space-y-2">
@@ -128,7 +138,6 @@ function Login() {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  setError('');
                 }}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
                 placeholder="you@example.com"
@@ -152,7 +161,6 @@ function Login() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  setError('');
                 }}
                 className="w-full pl-10 pr-10 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
                 placeholder="••••••••"
@@ -185,7 +193,6 @@ function Login() {
                     value={confirmPassword}
                     onChange={(e) => {
                       setConfirmPassword(e.target.value);
-                      setError('');
                     }}
                     className="w-full pl-10 pr-10 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
                     placeholder="••••••••"

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Login from './pages/Login';
 import ProfileSetup from './pages/ProfileSetup';
 import Home from './pages/Home';
@@ -34,11 +35,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <div className="h-screen overflow-hidden bg-slate-950 flex flex-col">
-        <AppContent />
-      </div>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <div className="h-screen overflow-hidden bg-slate-950 flex flex-col">
+          <AppContent />
+        </div>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

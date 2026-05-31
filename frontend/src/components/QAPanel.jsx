@@ -66,7 +66,7 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
   }, [qaList, isLoading]);
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       
       {/* Panel Header */}
       <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center space-x-2">
