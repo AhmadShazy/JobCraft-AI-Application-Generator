@@ -7,6 +7,8 @@ import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
 import { generateDocs, answerQuestion, getHistory } from '../api/client';
 import { AlertCircle } from 'lucide-react';
+import ProfileEdit from './ProfileEdit';
+
 
 const triggerDownload = (url) => {
   const iframe = document.createElement('iframe');
@@ -30,6 +32,9 @@ function Home({ onLogout }) {
   // Q&A state
   const [qaList, setQaList] = useState([]);
   const [isAnswering, setIsAnswering] = useState(false);
+
+  // Profile Edit toggle state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Load history on mount
   useEffect(() => {
@@ -102,9 +107,17 @@ function Home({ onLogout }) {
     }
   };
 
+  if (isEditingProfile) {
+    return <ProfileEdit onBackToDashboard={() => setIsEditingProfile(false)} />;
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <Navbar onLogout={onLogout} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} />
+      <Navbar 
+        onLogout={onLogout} 
+        onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} 
+        onEditProfile={() => setIsEditingProfile(true)} 
+      />
 
       <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
         

@@ -63,6 +63,11 @@ export const saveProfile = async (profile) => {
   return response.data;
 };
 
+export const updateProfile = async (payload) => {
+  const response = await api.patch('/profile/update', payload);
+  return response.data;
+};
+
 export const getMyProfile = async () => {
   const response = await api.get('/profile/me');
   return response.data;

@@ -24,6 +24,56 @@ class NormalizeRequest(BaseModel):
 class SaveProfileRequest(BaseModel):
     profile: dict
 
+class UpdateProfileRequest(BaseModel):
+    profile: dict | None = None
+    basic_info: dict | None = None
+    education: list[dict] | None = None
+
+@router.patch("/update")
+async def update_profile(payload: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Updates the authenticated user's profile.
+    - If 'profile' is sent (a full normalized profile), it overwrites the existing profile.
+    - If 'basic_info' or 'education' is sent, it merges these fields directly without Gemini.
+    """
+    db = get_database()
+    existing_profile = current_user.get("profile", {})
+    
+    if payload.profile is not None:
+        updated_profile = payload.profile
+    else:
+        updated_profile = {**existing_profile}
+        if payload.basic_info is not None:
+            for k, v in payload.basic_info.items():
+                updated_profile[k] = v
+        if payload.education is not None:
+            updated_profile["education"] = payload.education
+            
+    # Re-evaluate profile completeness
+    name = updated_profile.get("name")
+    email = updated_profile.get("email")
+    phone = updated_profile.get("phone")
+    location = updated_profile.get("location")
+    education = updated_profile.get("education", [])
+    is_complete = bool(name and email and phone and location and education)
+    
+    from bson import ObjectId
+    await db.users.update_one(
+        {"_id": ObjectId(current_user["_id"])},
+        {
+            "$set": {
+                "profile": updated_profile,
+                "profile_complete": is_complete
+            }
+        }
+    )
+    
+    return {
+        "status": "ok",
+        "message": "Profile updated successfully.",
+        "profile_complete": is_complete
+    }
+
 @router.post("/normalize")
 async def normalize_profile(payload: NormalizeRequest, current_user: dict = Depends(get_current_user)):
     """
