@@ -20,7 +20,9 @@ from backend.ai_client import GeminiClient, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
 from backend.database import connect_to_mongo, close_mongo_connection
 from backend.routers.auth_router import router as auth_router
+from backend.routers.profile_router import router as profile_router
 from backend.dependencies import get_current_user
+
 
 
 
@@ -100,6 +102,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(profile_router)
 
 @app.get("/auth/verify")
 def verify_session(current_user: dict = Depends(get_current_user)):
