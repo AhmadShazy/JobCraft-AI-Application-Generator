@@ -1,19 +1,26 @@
 # JobCraft AI
-### Personal Job Application Generator — v2.0
-
-JobCraft AI is a secure, multi-user web application that automates tailoring resumes, cover letters, and screening question answers for job applications. Each user has their own protected profile and generation history. Documents are ATS-optimized using the **Gemini API** and generated as `.docx` files ready to submit.
+> **AI-powered job application generator** — tailors resumes, cover letters, and screening question answers to any job description using your personal profile and the Google Gemini API.
 
 ---
 
-## What's New in v2.0
+## What It Does
 
-- Full multi-user support with secure JWT authentication
-- 4-step guided profile setup wizard with AI normalization
-- MongoDB database — all profiles and history stored per user
-- Profile edit screen with change detection
-- Dynamic file naming using authenticated user's real name
-- Refresh token rotation for session security
-- Entire app gated behind authentication
+Paste a job description, click generate — JobCraft AI reads your profile, analyzes the JD, and delivers a tailored `.docx` resume and cover letter in seconds. No manual formatting. No copy-pasting. Every output is ATS-aware and written to match the specific role.
+
+It also features a built-in **Q&A assistant** that answers screening questions in your voice, using your experience and the JD as context.
+
+---
+
+## Key Features
+
+- **4-Step Profile Wizard** — structured onboarding that collects your basic info, education, and professional background as free text, then uses Gemini to normalize it into a structured profile
+- **AI Document Generation** — tailored resume and cover letter generated as `.docx` files with one click
+- **Intelligent Company Detection** — automatically extracts the hiring company name from the JD if you don't provide one
+- **Q&A Assistant** — answers screening questions in context of both your profile and the JD, with a one-click copy button
+- **Generation History** — every application is logged per user; slide open the history drawer to re-download any past file
+- **Profile Editor** — update your profile at any time; background sections go through Gemini re-normalization with a preview before saving
+- **Gemini Fallback Chain** — automatically retries across 5 Gemini model variants if quota or rate limits are hit; never crashes silently
+- **Secure Multi-User Auth** — JWT access + refresh tokens in `httpOnly` cookies, bcrypt password hashing, refresh token rotation with replay detection
 
 ---
 
@@ -21,11 +28,13 @@ JobCraft AI is a secure, multi-user web application that automates tailoring res
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, Vite, Tailwind CSS |
-| Backend | FastAPI (Python) |
-| Database | MongoDB (via Motor async driver) |
-| AI | Google Gemini API (fallback chain) |
-| Auth | JWT + httpOnly cookies, bcrypt |
+| Frontend | React 19, Vite |
+| Styling | Vanilla CSS + Tailwind CSS utility classes |
+| Backend | FastAPI (Python 3.10+) |
+| Database | MongoDB via Motor (async) |
+| AI | Google Gemini API (5-model fallback chain) |
+| Auth | JWT (PyJWT) + bcrypt via passlib |
+| Document Generation | python-docx |
 | Local DB | Docker (MongoDB container) |
 
 ---
@@ -34,67 +43,66 @@ JobCraft AI is a secure, multi-user web application that automates tailoring res
 
 - **Node.js** v20+
 - **Python** 3.10+
-- **Docker Desktop** (for MongoDB)
-- **Gemini API Key** — [Get one free at Google AI Studio](https://aistudio.google.com/)
+- **Docker Desktop** (for the MongoDB container)
+- **Gemini API Key** — free at [Google AI Studio](https://aistudio.google.com/)
 
 ---
 
-## Setup & Installation
+## Installation & Setup
 
-### 1. Clone the Repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/AhmadShazy/JobCraft-AI-Application-Generator.git
 cd JobCraft-AI-Application-Generator
 ```
 
-### 2. Configure Environment Variables
+### 2. Environment Variables
 
-Copy the example environment file and fill in your values:
+Copy the example file:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and configure:
+Open `.env` and fill in your values:
 
 ```env
 # MongoDB
 MONGO_URI=mongodb://localhost:27017
 DB_NAME=jobcraft_db
 
-# JWT Auth — generate a strong secret key
-# Run: openssl rand -hex 32
-JWT_SECRET=your_secure_jwt_secret_here
+# JWT — generate with: openssl rand -hex 32
+JWT_SECRET=your_secure_secret_here
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# Gemini API
+# Gemini
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 3. Start MongoDB via Docker
+### 3. Start MongoDB (Docker)
 
-Make sure Docker Desktop is running, then:
+Make sure Docker Desktop is running:
 
 ```bash
 docker-compose up -d
 ```
 
-MongoDB will start on port `27017` in the background. Data persists in a Docker volume between restarts.
+MongoDB starts on port `27017`. Data persists in a named Docker volume between restarts.
 
-### 4. Start the Backend (FastAPI)
+### 4. Backend (FastAPI)
 
-From the project root, activate your Python virtual environment and start the server:
+From the project root, activate your virtual environment and start the server:
 
-**Windows (PowerShell):**
+**Windows — PowerShell:**
 ```powershell
 .\venv\Scripts\Activate.ps1
 uvicorn backend.main:app --reload --port 8000
 ```
 
-**Windows (Command Prompt):**
+**Windows — Command Prompt:**
 ```cmd
 .\venv\Scripts\activate.bat
 uvicorn backend.main:app --reload --port 8000
@@ -106,11 +114,11 @@ source venv/bin/activate
 uvicorn backend.main:app --reload --port 8000
 ```
 
-Backend runs at: [http://localhost:8000](http://localhost:8000)
+Backend runs at → `http://localhost:8000`
 
-### 5. Start the Frontend (React + Vite)
+### 5. Frontend (React + Vite)
 
-Open a **second terminal** and run:
+In a second terminal:
 
 ```bash
 cd frontend
@@ -118,48 +126,47 @@ npm install
 npm run dev
 ```
 
-Frontend runs at: [http://localhost:5173](http://localhost:5173)
+Frontend runs at → `http://localhost:5173`
 
 ---
 
-## How to Use
+## First-Time Use
 
-### First Time — Create an Account
+1. Open `http://localhost:5173`
+2. Click **Create Account**, enter your email and a password (min 8 chars, at least one number)
+3. Complete the **4-step Profile Setup Wizard**:
 
-1. Open [http://localhost:5173](http://localhost:5173)
-2. Click **Create Account**
-3. Enter your email and a password (min 8 characters, at least one number)
-4. Complete the **4-step Profile Setup Wizard**:
-   - **Step 1** — Basic Info: name, email, phone, location, LinkedIn, GitHub, headline, languages
-   - **Step 2** — Education: degree, institution, field of study, dates (multiple entries supported)
-   - **Step 3** — Professional Background: paste free text for experience, skills, projects, certifications, volunteering
-   - **Step 4** — AI Review: Gemini normalizes your input into structured JSON — review and confirm before saving
+| Step | What you fill in |
+|---|---|
+| 1 — Basic Info | Name, email, phone, location, LinkedIn, GitHub, portfolio, headline, languages |
+| 2 — Education | Degree, institution, field, dates — supports multiple entries |
+| 3 — Background | Paste free text: experience, skills, projects, certifications, volunteering |
+| 4 — AI Review | Gemini normalizes your text into structured JSON — preview and confirm before saving |
 
-### Generating Documents
+---
 
-1. Log in to your workspace
-2. Paste the full **Job Description** into the left panel
-3. Click **Generate Resume & Cover Letter**
-4. Your tailored `.docx` files will auto-download
-5. Files are also saved to **History** for re-download anytime
+## Generating Documents
 
-### Q&A Assistant
+1. Log in and paste the full **Job Description** into the left panel
+2. Click **Generate Resume & Cover Letter**
+3. Both `.docx` files download automatically
+4. They are also saved to your **History** for re-download at any time
 
-- Type any screening question in the right panel
-- Character and word limits are auto-detected from the question text
-- Answers are copy-paste ready
+---
 
-### History
+## Q&A Assistant
 
-- Click **History** in the navbar to view all past generations
-- Re-download any previous resume or cover letter
-- View the original JD used for each generation
+- Type a screening question in the right panel (the JD must be filled first)
+- The AI answers in context of your profile + the JD
+- Click the copy icon on any answer to copy it to clipboard
 
-### Edit Profile
+---
 
-- Click **Edit Profile** in the navbar
-- Update basic info and education directly (no AI needed)
-- Update background details (experience, skills, projects etc.) — changes go through Gemini normalization and a preview confirmation before saving
+## Editing Your Profile
+
+Click **Edit Profile** in the navbar:
+- Basic info and education update immediately — no AI step needed
+- Changes to experience, skills, projects, and other background sections trigger Gemini re-normalization and show a preview before saving
 
 ---
 
@@ -167,31 +174,42 @@ Frontend runs at: [http://localhost:5173](http://localhost:5173)
 
 ```
 JobCraft-AI-Application-Generator/
+│
 ├── backend/
-│   ├── main.py               # FastAPI app, generation + download + history endpoints
-│   ├── auth.py               # JWT token logic, bcrypt hashing
-│   ├── database.py           # Motor MongoDB connection
-│   ├── dependencies.py       # get_current_user FastAPI dependency
-│   ├── generator.py          # .docx resume + cover letter builder
-│   ├── prompts.py            # Gemini prompts (resume, cover letter, Q&A, normalization)
-│   ├── ai_client.py          # Gemini client with model fallback chain
+│   ├── main.py                  # FastAPI app — /generate, /answer, /download, /history
+│   ├── ai_client.py             # Gemini client with 5-model fallback chain
+│   ├── auth.py                  # JWT creation/verification, bcrypt hashing
+│   ├── database.py              # Motor async MongoDB connection
+│   ├── dependencies.py          # get_current_user FastAPI dependency
+│   ├── generator.py             # .docx resume + cover letter builder (python-docx)
+│   ├── prompts.py               # All Gemini prompts (resume, cover letter, Q&A, normalization)
 │   ├── requirements.txt
-│   ├── outputs/              # Generated .docx files (gitignored)
+│   ├── outputs/                 # Generated .docx files — gitignored
 │   └── routers/
-│       ├── auth_router.py    # /auth/signup, /auth/login, /auth/logout, /auth/refresh
-│       └── profile_router.py # /profile/normalize, /profile/save, /profile/me, /profile/update
+│       ├── auth_router.py       # /auth/signup, /auth/login, /auth/logout, /auth/refresh
+│       └── profile_router.py   # /profile/normalize, /profile/save, /profile/me, /profile/update
+│
 ├── frontend/
 │   └── src/
-│       ├── api/client.js     # Axios instance + all API call functions
+│       ├── api/
+│       │   └── client.js        # Axios instance + all API call functions
 │       ├── context/
-│       │   ├── AuthContext.jsx   # Global auth state, login/signup/logout
-│       │   └── ToastContext.jsx  # Toast notification system
-│       ├── components/       # Navbar, JDInput, QAPanel, HistoryDrawer, etc.
+│       │   ├── AuthContext.jsx  # Global auth state — login, signup, logout, session check
+│       │   └── ToastContext.jsx # Floating toast notification system
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── JDInput.jsx
+│       │   ├── GenerateButton.jsx
+│       │   ├── QAPanel.jsx
+│       │   ├── HistoryDrawer.jsx
+│       │   ├── DownloadPanel.jsx
+│       │   └── Loader.jsx
 │       └── pages/
-│           ├── Login.jsx         # Login + Signup tabs
-│           ├── ProfileSetup.jsx  # 4-step wizard
-│           ├── ProfileEdit.jsx   # Profile management screen
-│           └── Home.jsx          # Main dashboard
+│           ├── Login.jsx        # Login + Signup tabs
+│           ├── ProfileSetup.jsx # 4-step onboarding wizard
+│           ├── ProfileEdit.jsx  # Profile management screen
+│           └── Home.jsx         # Main workspace dashboard
+│
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -199,69 +217,54 @@ JobCraft-AI-Application-Generator/
 
 ---
 
-## Authentication & Security
-
-- Passwords hashed with **bcrypt** via passlib — never stored in plain text
-- **JWT access tokens** (30 min) and **refresh tokens** (7 days) stored in **httpOnly cookies** — never accessible to JavaScript
-- **Refresh token rotation** — each refresh issues a new pair and invalidates the old one. Replayed tokens trigger immediate session termination
-- All generation, history, and download endpoints require a valid authenticated session
-- File downloads are scoped — users can only download files they generated
-
----
-
-## API Endpoints
+## API Reference
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/signup` | No | Register new user |
-| POST | `/auth/login` | No | Login and receive tokens |
-| POST | `/auth/logout` | No | Clear auth cookies |
-| POST | `/auth/refresh` | Cookie | Rotate tokens silently |
-| GET | `/auth/verify` | Yes | Verify current session |
-| POST | `/profile/normalize` | Yes | AI-normalize raw profile text |
-| POST | `/profile/save` | Yes | Save confirmed profile to MongoDB |
-| GET | `/profile/me` | Yes | Fetch current user profile |
-| PATCH | `/profile/update` | Yes | Update profile (partial or full) |
-| POST | `/generate` | Yes | Generate resume + cover letter |
-| POST | `/answer` | Yes | Answer a screening question |
-| GET | `/download/{filename}` | Yes | Download generated file (scoped to user) |
-| GET | `/history` | Yes | Fetch user's generation history |
+| `POST` | `/auth/signup` | No | Register new user account |
+| `POST` | `/auth/login` | No | Login — sets `httpOnly` auth cookies |
+| `POST` | `/auth/logout` | No | Clears auth cookies |
+| `POST` | `/auth/refresh` | Cookie | Silently rotate access + refresh tokens |
+| `GET` | `/auth/verify` | Yes | Verify active session |
+| `POST` | `/profile/normalize` | Yes | AI-normalize raw profile text via Gemini |
+| `POST` | `/profile/save` | Yes | Save confirmed structured profile |
+| `GET` | `/profile/me` | Yes | Fetch current user's profile |
+| `PATCH` | `/profile/update` | Yes | Update profile (partial or full) |
+| `POST` | `/generate` | Yes | Generate tailored resume + cover letter |
+| `POST` | `/answer` | Yes | Answer a screening question |
+| `GET` | `/download/{filename}` | Yes | Download file (user-scoped — 403 if not yours) |
+| `GET` | `/history` | Yes | Fetch user's generation history |
 
 ---
 
-## Git Branch Structure
+## Security Model
 
-```
-main                          ← stable, production-ready
-dev                           ← integration branch
-feature/mongodb               ← database foundation
-feature/auth                  ← JWT authentication backend
-feature/profile-setup         ← wizard + normalization endpoints + frontend
-feature/profile-setup-frontend← profile wizard UI
-feature/profile-edit          ← profile edit screen
-feature/generation-db         ← wired generation to MongoDB, removed JSON files
-```
+- Passwords hashed with **bcrypt** — never stored in plain text
+- **JWT access tokens** expire in 30 minutes; **refresh tokens** expire in 7 days
+- Both tokens stored in **`httpOnly` cookies** — inaccessible to JavaScript
+- **Refresh token rotation** — every silent refresh issues a new pair and invalidates the previous one; replayed tokens trigger immediate session termination
+- File downloads are **user-scoped** — queried against the user's own history before serving; a 403 is returned if the file belongs to another user
 
 ---
 
-## Environment Variables Reference
+## Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `MONGO_URI` | Yes | MongoDB connection string |
-| `DB_NAME` | Yes | MongoDB database name |
-| `JWT_SECRET` | Yes | Secret key for signing JWT tokens |
-| `JWT_ALGORITHM` | Yes | JWT algorithm (HS256 recommended) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Yes | Access token lifetime in minutes |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Yes | Refresh token lifetime in days |
-| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `MONGO_URI` | ✅ | MongoDB connection string |
+| `DB_NAME` | ✅ | MongoDB database name |
+| `JWT_SECRET` | ✅ | Secret key for signing JWT tokens |
+| `JWT_ALGORITHM` | ✅ | `HS256` recommended |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | ✅ | Access token lifetime |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | ✅ | Refresh token lifetime |
+| `GEMINI_API_KEY` | ✅ | Google Gemini API key |
 
 ---
 
 ## Notes
 
-- Generated `.docx` files are stored in `backend/outputs/` — this folder is gitignored
-- The `.env` file is gitignored — never commit real secrets
-- MongoDB data persists in a Docker named volume (`mongodb_data`) between restarts
-- Email verification is not yet implemented — `email_verified` field is stored and ready for a future phase
-- The Gemini client uses an automatic model fallback chain — if one model hits quota limits it silently tries the next
+- Generated `.docx` files live in `backend/outputs/` — gitignored, never committed
+- The `.env` file is gitignored — never commit your real secrets
+- MongoDB data persists in Docker volume `mongodb_data` between container restarts
+- The Gemini client silently tries 5 model variants in order if quota limits are hit — no manual intervention needed
+- Email verification is not yet implemented; the `email_verified` field is stored and ready for a future phase
