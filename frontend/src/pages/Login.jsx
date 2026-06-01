@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Mail, Sparkles, Eye, EyeOff, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 
 function Login() {
   const { login, signup, signupCredentials } = useAuth();
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'signup'
+  const [activeTab, setActiveTab] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
   const [loading, setLoading] = useState(false);
-  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Password rules validation states
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
   const passwordsMatch = activeTab === 'login' || (password === confirmPassword && password.length > 0);
 
-  // Pre-fill signupCredentials if user navigated back from wizard (Phase 3 integration)
   useEffect(() => {
     if (signupCredentials?.email) {
       setEmail(signupCredentials.email);
@@ -33,7 +29,6 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (activeTab === 'signup') {
       if (!hasMinLength || !hasNumber) {
         addToast('Password must be at least 8 characters and include one number.', 'error');
@@ -44,7 +39,6 @@ function Login() {
         return;
       }
     }
-
     setLoading(true);
     try {
       if (activeTab === 'login') {
@@ -72,63 +66,65 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 p-4 relative overflow-y-auto">
-      
-      {/* Dynamic Background Accents */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-navy-950 p-4 relative overflow-y-auto">
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-800 transition-all duration-300 relative z-10 my-8">
-        
-        {/* Header Block */}
-        <div className="p-8 pb-6 text-center bg-gradient-to-r from-primary-900/80 to-indigo-950/80 text-white relative border-b border-slate-800">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/6 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
+
+      <div className="w-full max-w-md bg-navy-900/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-primary-800/30 relative z-10 my-8">
+
+        {/* Header */}
+        <div className="p-8 pb-6 text-center bg-gradient-to-br from-navy-950 to-primary-950/60 text-white relative border-b border-primary-800/20">
           <div className="absolute top-4 right-4">
-            <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+            <Sparkles className="w-5 h-5 text-accent-500 animate-pulse" />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-400 to-indigo-300 bg-clip-text text-transparent">
+          {/* Logo icon */}
+          <div className="flex justify-center mb-3">
+            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg shadow-primary-500/30">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-300 to-accent-400 bg-clip-text text-transparent">
             JobCraft AI
           </h1>
-          <p className="mt-2 text-slate-400 text-sm font-medium">Personal Job Application Assistant v2.0</p>
+          <p className="mt-2 text-primary-300/70 text-sm font-medium">Personal Job Application Assistant</p>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-slate-800 bg-slate-900/30">
+        <div className="flex border-b border-primary-800/20 bg-navy-950/40">
           <button
-            onClick={() => {
-              setActiveTab('login');
-            }}
+            onClick={() => setActiveTab('login')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'login'
-                ? 'border-primary-500 text-primary-400 bg-slate-900/40'
-                : 'border-transparent text-slate-500 hover:text-slate-400'
+                ? 'border-accent-500 text-accent-400 bg-navy-900/40'
+                : 'border-transparent text-primary-400/60 hover:text-primary-300'
             }`}
           >
             Log In
           </button>
           <button
-            onClick={() => {
-              setActiveTab('signup');
-            }}
+            onClick={() => setActiveTab('signup')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'signup'
-                ? 'border-primary-500 text-primary-400 bg-slate-900/40'
-                : 'border-transparent text-slate-500 hover:text-slate-400'
+                ? 'border-accent-500 text-accent-400 bg-navy-900/40'
+                : 'border-transparent text-primary-400/60 hover:text-primary-300'
             }`}
           >
             Create Account
           </button>
         </div>
 
-        {/* Form Block */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
 
-          {/* Email field */}
+          {/* Email */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="email">
+            <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="email">
               Email Address
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
                 <Mail className="w-4 h-4" />
               </span>
               <input
@@ -136,22 +132,20 @@ function Login() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                }}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
                 placeholder="you@example.com"
               />
             </div>
           </div>
 
-          {/* Password field */}
+          {/* Password */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="password">
+            <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="password">
               Password
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
                 <Lock className="w-4 h-4" />
               </span>
               <input
@@ -159,31 +153,25 @@ function Login() {
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                }}
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
                 placeholder="••••••••"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-400 focus:outline-none"
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-primary-500/60 hover:text-primary-400 focus:outline-none">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Confirm Password field (Signup only) */}
+          {/* Confirm Password (signup only) */}
           {activeTab === 'signup' && (
             <>
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="confirmPassword">
+                <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="confirmPassword">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
                     <Lock className="w-4 h-4" />
                   </span>
                   <input
@@ -191,57 +179,39 @@ function Login() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
                     value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                    }}
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600 font-medium"
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
                     placeholder="••••••••"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-400 focus:outline-none"
-                  >
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-primary-500/60 hover:text-primary-400 focus:outline-none">
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Password Rule checklist indicators */}
-              <div className="p-3 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2 text-xs font-medium">
+              {/* Password rules */}
+              <div className="p-3 bg-navy-950/50 rounded-xl border border-primary-700/20 space-y-2 text-xs font-medium">
                 <div className="flex items-center space-x-2">
-                  {hasMinLength ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-slate-600" />
-                  )}
-                  <span className={hasMinLength ? "text-slate-300" : "text-slate-500"}>At least 8 characters</span>
+                  {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-primary-800/60" />}
+                  <span className={hasMinLength ? 'text-slate-300' : 'text-primary-600/60'}>At least 8 characters</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {hasNumber ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-slate-600" />
-                  )}
-                  <span className={hasNumber ? "text-slate-300" : "text-slate-500"}>Contains at least one number</span>
+                  {hasNumber ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-primary-800/60" />}
+                  <span className={hasNumber ? 'text-slate-300' : 'text-primary-600/60'}>Contains at least one number</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {passwordsMatch ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-rose-500" />
-                  )}
-                  <span className={passwordsMatch ? "text-slate-300" : "text-rose-400"}>Passwords match</span>
+                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-rose-500" />}
+                  <span className={passwordsMatch ? 'text-slate-300' : 'text-rose-400'}>Passwords match</span>
                 </div>
               </div>
             </>
           )}
 
-          {/* Submit button */}
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-xl font-bold shadow-md hover:from-primary-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+            className="w-full py-3 bg-gradient-to-r from-accent-500 to-accent-700 hover:from-accent-400 hover:to-accent-600 text-navy-950 font-extrabold rounded-xl shadow-lg shadow-accent-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
           >
             {loading ? (
               <span>Processing...</span>
@@ -250,7 +220,6 @@ function Login() {
             )}
           </button>
         </form>
-
       </div>
     </div>
   );

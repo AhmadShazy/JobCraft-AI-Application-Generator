@@ -132,7 +132,7 @@ function Home({ onLogout }) {
               disabled={isGenerating}
             />
 
-            <div className="bg-white px-5 py-4 rounded-2xl border border-slate-100 shadow-sm flex-shrink-0">
+            <div className="bg-navy-900/40 backdrop-blur-xl px-5 py-4 rounded-2xl border border-primary-800/30 shadow-2xl flex-shrink-0">
               <GenerateButton
                 onClick={handleGenerate}
                 disabled={isGenerating || !jd.trim()}

@@ -8,9 +8,9 @@ function DownloadPanel({ resumeUrl, coverletterUrl }) {
   const clLink = coverletterUrl ? `http://localhost:8000${coverletterUrl}` : '#';
 
   return (
-    <div className="space-y-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-      <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-2 mb-1">
-        <FileText className="w-4 h-4 text-slate-400" />
+    <div className="space-y-3 bg-navy-900/40 backdrop-blur-xl p-6 rounded-2xl border border-primary-800/30 shadow-2xl">
+      <h3 className="text-sm font-bold text-primary-300 flex items-center space-x-2 mb-1">
+        <FileText className="w-4 h-4 text-primary-400/80" />
         <span>Generated Artifacts</span>
       </h3>
       
@@ -22,8 +22,8 @@ function DownloadPanel({ resumeUrl, coverletterUrl }) {
           onClick={(e) => !isReady && e.preventDefault()}
           className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-bold transition-all duration-200 border shadow-sm ${
             isReady
-              ? 'bg-primary-50 hover:bg-primary-100 text-primary-700 border-primary-200 hover:border-primary-300 cursor-pointer'
-              : 'bg-slate-50 text-slate-400 border-slate-200 opacity-40 cursor-not-allowed'
+              ? 'bg-navy-900/60 hover:bg-primary-950/40 text-primary-300 hover:text-white border border-primary-800/30 hover:border-primary-500/50 cursor-pointer'
+              : 'bg-navy-950/40 text-primary-900/60 border border-primary-900/20 opacity-40 cursor-not-allowed'
           }`}
         >
           <Download className="w-4 h-4" />
@@ -37,8 +37,8 @@ function DownloadPanel({ resumeUrl, coverletterUrl }) {
           onClick={(e) => !isReady && e.preventDefault()}
           className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-bold transition-all duration-200 border shadow-sm ${
             isReady
-              ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 hover:border-indigo-300 cursor-pointer'
-              : 'bg-slate-50 text-slate-400 border-slate-200 opacity-40 cursor-not-allowed'
+              ? 'bg-navy-900/60 hover:bg-primary-950/40 text-primary-300 hover:text-white border border-primary-800/30 hover:border-primary-500/50 cursor-pointer'
+              : 'bg-navy-950/40 text-primary-900/60 border border-primary-900/20 opacity-40 cursor-not-allowed'
           }`}
         >
           <Download className="w-4 h-4" />
