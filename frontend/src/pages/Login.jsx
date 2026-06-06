@@ -66,39 +66,39 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-navy-950 p-4 relative overflow-y-auto">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-y-auto">
 
       {/* Ambient background glows */}
       <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/6 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/12 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
 
-      <div className="w-full max-w-md bg-navy-900/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-primary-800/30 relative z-10 my-8">
+      <div className="w-full max-w-md bg-cyan-100/40 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-accent-200/60 border-t-4 border-t-accent-500 relative z-10 my-8">
 
         {/* Header */}
-        <div className="p-8 pb-6 text-center bg-gradient-to-br from-navy-950 to-primary-950/60 text-white relative border-b border-primary-800/20">
+        <div className="p-8 pb-6 text-center bg-cyan-100/60 text-slate-800 relative border-b border-accent-200/60">
           <div className="absolute top-4 right-4">
             <Sparkles className="w-5 h-5 text-accent-500 animate-pulse" />
           </div>
           {/* Logo icon */}
           <div className="flex justify-center mb-3">
-            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg shadow-primary-500/30">
+            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-md shadow-primary-500/25">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-300 to-accent-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
             JobCraft AI
           </h1>
-          <p className="mt-2 text-primary-300/70 text-sm font-medium">Personal Job Application Assistant</p>
+          <p className="mt-2 text-slate-500 text-sm font-semibold">Personal Job Application Assistant</p>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-primary-800/20 bg-navy-950/40">
+        <div className="flex border-b border-accent-200/60 bg-cyan-100/30">
           <button
             onClick={() => setActiveTab('login')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'login'
-                ? 'border-accent-500 text-accent-400 bg-navy-900/40'
-                : 'border-transparent text-primary-400/60 hover:text-primary-300'
+                ? 'border-accent-500 text-accent-700 bg-cyan-100/40'
+                : 'border-transparent text-slate-400 hover:text-slate-700'
             }`}
           >
             Log In
@@ -107,8 +107,8 @@ function Login() {
             onClick={() => setActiveTab('signup')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'signup'
-                ? 'border-accent-500 text-accent-400 bg-navy-900/40'
-                : 'border-transparent text-primary-400/60 hover:text-primary-300'
+                ? 'border-accent-500 text-accent-700 bg-cyan-100/40'
+                : 'border-transparent text-slate-400 hover:text-slate-700'
             }`}
           >
             Create Account
@@ -120,11 +120,11 @@ function Login() {
 
           {/* Email */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="email">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="email">
               Email Address
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                 <Mail className="w-4 h-4" />
               </span>
               <input
@@ -133,7 +133,7 @@ function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
                 placeholder="you@example.com"
               />
             </div>
@@ -141,11 +141,11 @@ function Login() {
 
           {/* Password */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="password">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="password">
               Password
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                 <Lock className="w-4 h-4" />
               </span>
               <input
@@ -154,10 +154,10 @@ function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
+                className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
                 placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-primary-500/60 hover:text-primary-400 focus:outline-none">
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -167,11 +167,11 @@ function Login() {
           {activeTab === 'signup' && (
             <>
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-primary-400/80" htmlFor="confirmPassword">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="confirmPassword">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-primary-500/60">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                     <Lock className="w-4 h-4" />
                   </span>
                   <input
@@ -180,28 +180,28 @@ function Login() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-navy-950/60 border border-primary-700/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500/40 transition-all text-slate-100 placeholder-primary-700/50 font-medium"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
                     placeholder="••••••••"
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-primary-500/60 hover:text-primary-400 focus:outline-none">
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {/* Password rules */}
-              <div className="p-3 bg-navy-950/50 rounded-xl border border-primary-700/20 space-y-2 text-xs font-medium">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs font-bold">
                 <div className="flex items-center space-x-2">
-                  {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-primary-800/60" />}
-                  <span className={hasMinLength ? 'text-slate-300' : 'text-primary-600/60'}>At least 8 characters</span>
+                  {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-slate-300" />}
+                  <span className={hasMinLength ? 'text-slate-700' : 'text-slate-400'}>At least 8 characters</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {hasNumber ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-primary-800/60" />}
-                  <span className={hasNumber ? 'text-slate-300' : 'text-primary-600/60'}>Contains at least one number</span>
+                  {hasNumber ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-slate-300" />}
+                  <span className={hasNumber ? 'text-slate-700' : 'text-slate-400'}>Contains at least one number</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-400" /> : <XCircle className="w-4 h-4 text-rose-500" />}
-                  <span className={passwordsMatch ? 'text-slate-300' : 'text-rose-400'}>Passwords match</span>
+                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-rose-500" />}
+                  <span className={passwordsMatch ? 'text-slate-700' : 'text-rose-500'}>Passwords match</span>
                 </div>
               </div>
             </>
@@ -211,7 +211,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-accent-500 to-accent-700 hover:from-accent-400 hover:to-accent-600 text-navy-950 font-extrabold rounded-xl shadow-lg shadow-accent-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+            className="w-full py-3 bg-gradient-to-r from-primary-700 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white font-extrabold rounded-xl shadow-lg shadow-accent-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
           >
             {loading ? (
               <span>Processing...</span>
