@@ -12,9 +12,9 @@ function AppContent() {
   // 1. Initial silent refresh verification loader
   if (loading) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-950 text-slate-100">
-        <Loader2 className="w-10 h-10 text-primary-500 animate-spin mb-3" />
-        <span className="text-sm font-semibold tracking-wider text-slate-400">Loading JobCraft AI Workspace...</span>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-800 animate-fade-in">
+        <Loader2 className="w-10 h-10 text-primary-600 animate-spin mb-3" />
+        <span className="text-xs font-bold tracking-wider text-slate-500">Loading JobCraft AI Workspace...</span>
       </div>
     );
   }
@@ -37,7 +37,7 @@ function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <div className="h-screen overflow-hidden bg-navy-950 flex flex-col">
+        <div className="h-screen overflow-hidden bg-slate-50 flex flex-col">
           <AppContent />
         </div>
       </AuthProvider>

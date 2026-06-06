@@ -4,23 +4,23 @@
 
 @layer base {
   body {
-    @apply bg-navy-900 text-slate-100 antialiased min-h-screen font-sans;
+    @apply bg-slate-50 text-slate-800 antialiased min-h-screen font-sans;
   }
 }
 
-/* ── Shimmer — teal gradient ── */
+/* ── Shimmer — cyan gradient for light mode ── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, #219ebc 25%, #8ecae6 50%, #219ebc 75%);
+  background: linear-gradient(90deg, #ecfeff 25%, #cffafe 50%, #ecfeff 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
+  animation: shimmer 1.6s infinite linear;
 }
 
-/* ── Scrollbar — navy theme ── */
+/* ── Scrollbar — light cyan theme ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -31,12 +31,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #219ebc55;
+  background: #a5f3fccc;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #219ebc99;
+  background: #67e8f9;
 }
 
 /* ── Toast slide-in ── */
@@ -52,7 +52,7 @@
 }
 
 .animate-slide-in {
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ── Fade-in for list items ── */
@@ -62,5 +62,6 @@
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.25s ease-out forwards;
+  animation: fadeIn 0.22s ease-out forwards;
 }
+
