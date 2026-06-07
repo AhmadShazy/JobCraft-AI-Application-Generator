@@ -399,7 +399,10 @@ def generate_cover_letter_docx(cl_data: dict, name: str, email: str, phone: str,
     # 2. Date
     date_p = doc.add_paragraph()
     date_p.paragraph_format.space_after = Pt(12)
-    date_run = date_p.add_run(cl_data.get("date", "May 31, 2026"))
+    from datetime import datetime
+    now = datetime.now()
+    default_date_str = f"{now.strftime('%B')} {now.day}, {now.year}"
+    date_run = date_p.add_run(cl_data.get("date") or default_date_str)
     apply_font_settings(date_run, size_pt=10)
 
     # 3. Recipient

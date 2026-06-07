@@ -4,11 +4,11 @@ import { Download, FileText } from 'lucide-react';
 function DownloadPanel({ resumeUrl, coverletterUrl }) {
   const isReady = !!(resumeUrl && coverletterUrl);
   
-  const resumeLink = resumeUrl ? `http://localhost:8000${resumeUrl}` : '#';
-  const clLink = coverletterUrl ? `http://localhost:8000${coverletterUrl}` : '#';
+  const resumeLink = resumeUrl ? `http://localhost:8001${resumeUrl}` : '#';
+  const clLink = coverletterUrl ? `http://localhost:8001${coverletterUrl}` : '#';
 
   return (
-    <div className="space-y-3 bg-cyan-50/15 p-6 rounded-2xl border border-cyan-100/80 shadow-sm">
+    <div className="space-y-3 bg-cyan-100/40 p-6 rounded-2xl border border-cyan-300 shadow-sm">
       <h3 className="text-sm font-bold text-slate-800 flex items-center space-x-2 mb-1">
         <FileText className="w-4.5 h-4.5 text-cyan-500" />
         <span>Generated Artifacts</span>

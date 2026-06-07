@@ -4,10 +4,17 @@ import { ToastProvider } from './context/ToastContext';
 import Login from './pages/Login';
 import ProfileSetup from './pages/ProfileSetup';
 import Home from './pages/Home';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import EmailVerificationGate from './pages/EmailVerificationGate';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
-  const { isAuthenticated, profileComplete, loading, logout } = useAuth();
+  // Render verify-email page publicly if URL path matches
+  if (window.location.pathname === '/verify-email') {
+    return <VerifyEmailPage />;
+  }
+
+  const { isAuthenticated, emailVerified, profileComplete, loading, logout } = useAuth();
 
   // 1. Initial silent refresh verification loader
   if (loading) {
@@ -24,12 +31,17 @@ function AppContent() {
     return <Login />;
   }
 
-  // 3. Gate users with incomplete profiles
+  // 3. Authenticated but not email verified
+  if (!emailVerified) {
+    return <EmailVerificationGate />;
+  }
+
+  // 4. Gate users with incomplete profiles
   if (!profileComplete) {
     return <ProfileSetup />;
   }
 
-  // 4. Render main application dashboard
+  // 5. Render main application dashboard
   return <Home onLogout={logout} />;
 }
 
