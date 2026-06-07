@@ -1,11 +1,12 @@
 import React from 'react';
 import { Download, FileText } from 'lucide-react';
+import { API_BASE_URL } from '../api/client';
 
 function DownloadPanel({ resumeUrl, coverletterUrl }) {
   const isReady = !!(resumeUrl && coverletterUrl);
   
-  const resumeLink = resumeUrl ? `http://localhost:8001${resumeUrl}` : '#';
-  const clLink = coverletterUrl ? `http://localhost:8001${coverletterUrl}` : '#';
+  const resumeLink = resumeUrl ? `${API_BASE_URL}${resumeUrl}` : '#';
+  const clLink = coverletterUrl ? `${API_BASE_URL}${coverletterUrl}` : '#';
 
   return (
     <div className="space-y-3 bg-cyan-100/40 p-6 rounded-2xl border border-cyan-300 shadow-sm">

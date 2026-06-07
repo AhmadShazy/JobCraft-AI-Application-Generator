@@ -5,7 +5,7 @@ import GenerateButton from '../components/GenerateButton';
 import Loader from '../components/Loader';
 import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
-import { generateDocs, answerQuestion, getHistory, sendVerificationEmail } from '../api/client';
+import { generateDocs, answerQuestion, getHistory, sendVerificationEmail, API_BASE_URL } from '../api/client';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import ProfileEdit from './ProfileEdit';
@@ -16,7 +16,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 const triggerDownload = (url) => {
   const iframe = document.createElement('iframe');
   iframe.style.display = 'none';
-  iframe.src = `http://localhost:8001${url}`;
+  iframe.src = `${API_BASE_URL}${url}`;
   document.body.appendChild(iframe);
   setTimeout(() => {
     document.body.removeChild(iframe);

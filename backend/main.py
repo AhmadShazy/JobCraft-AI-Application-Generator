@@ -4,10 +4,14 @@ import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
+
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
+from backend.limiter import limiter, get_user_id_key
 
 # Import modules from backend package
 from backend.prompts import (
@@ -55,9 +59,23 @@ async def lifespan(app: FastAPI):
 # ─────────────────────────────────────────────
 app = FastAPI(title="JobCraft AI Backend", version="1.0.0", lifespan=lifespan)
 
+# Rate Limiting configuration
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Too many requests. Please wait before trying again."}
+    )
+
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+allow_origins = [origin.strip() for origin in frontend_url.split(",")] if frontend_url else ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -123,7 +141,8 @@ def sanitize_for_filename(name: str) -> str:
 # ─────────────────────────────────────────────
 
 @app.post("/generate")
-async def generate_documents(payload: GenerateRequest, current_user: dict = Depends(get_current_user)):
+@limiter.limit("5/hour", key_func=get_user_id_key)
+async def generate_documents(request: Request, payload: GenerateRequest, current_user: dict = Depends(get_current_user)):
     profile_data = current_user.get("profile", {})
     if not profile_data:
         raise HTTPException(
@@ -230,12 +249,13 @@ async def generate_documents(payload: GenerateRequest, current_user: dict = Depe
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in /generate: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        print(f"[ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Document generation failed. Please try again later.")
 
 
 @app.post("/answer")
-async def answer_question(payload: AnswerRequest, current_user: dict = Depends(get_current_user)):
+@limiter.limit("20/hour", key_func=get_user_id_key)
+async def answer_question(request: Request, payload: AnswerRequest, current_user: dict = Depends(get_current_user)):
     profile_data = current_user.get("profile", {})
     if not profile_data:
         raise HTTPException(
@@ -261,8 +281,8 @@ async def answer_question(payload: AnswerRequest, current_user: dict = Depends(g
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in /answer: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        print(f"[ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate answer. Please try again later.")
 
 
 @app.get("/download/{filename}")

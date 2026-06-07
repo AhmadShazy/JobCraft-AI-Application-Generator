@@ -12,6 +12,7 @@ from backend.auth import (
     decode_token, set_auth_cookies, clear_auth_cookies
 )
 from backend.database import get_database
+from backend.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -100,7 +101,8 @@ async def send_verification_email_helper(user_id: str, email: str) -> str:
         raise e
 
 @router.post("/signup")
-async def signup(payload: SignupRequest, response: Response):
+@limiter.limit("5/15 minutes")
+async def signup(request: Request, payload: SignupRequest, response: Response):
     db = get_database()
     
     # 1. Normalize and check if email is taken
@@ -151,7 +153,8 @@ async def signup(payload: SignupRequest, response: Response):
     return {"status": "ok", "message": "User registered and logged in successfully. Verification email sent."}
 
 @router.post("/login")
-async def login(payload: LoginRequest, response: Response):
+@limiter.limit("10/15 minutes")
+async def login(request: Request, payload: LoginRequest, response: Response):
     db = get_database()
     email_normalized = payload.email.strip().lower()
     
@@ -264,7 +267,8 @@ async def refresh(request: Request, response: Response):
     return {"status": "ok", "message": "Tokens refreshed successfully."}
 
 @router.post("/send-verification")
-async def send_verification(current_user: dict = Depends(get_authenticated_user)):
+@limiter.limit("3/hour")
+async def send_verification(request: Request, current_user: dict = Depends(get_authenticated_user)):
     db = get_database()
     
     # 1. Check if user is already verified
