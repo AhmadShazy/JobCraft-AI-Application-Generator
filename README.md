@@ -14,6 +14,7 @@ It also features a built-in **Q&A assistant** that answers screening questions i
 ## Key Features
 
 - **4-Step Profile Wizard** — structured onboarding that collects your basic info, education, and professional background as free text, then uses Gemini to normalize it into a structured profile
+- **Email Verification & Security Gate** — automatic email verification dispatch on account signup using Resend. Sessions are gated under a strict verification wall (`EmailVerificationGate.jsx`) with 5-second polling intervals to auto-unlock the application once verified.
 - **AI Document Generation** — tailored resume and cover letter generated as `.docx` files with one click
 - **Intelligent Company Detection** — automatically extracts the hiring company name from the JD if you don't provide one
 - **Q&A Assistant** — answers screening questions in context of both your profile and the JD, with a one-click copy button
@@ -80,6 +81,10 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 
 # Gemini
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Resend Email Verification (Console logging fallback if empty)
+RESEND_API_KEY=your_resend_api_key_here
+FRONTEND_URL=http://localhost:5173
 ```
 
 ### 3. Start MongoDB (Docker)
@@ -205,10 +210,12 @@ JobCraft-AI-Application-Generator/
 │       │   ├── DownloadPanel.jsx
 │       │   └── Loader.jsx
 │       └── pages/
-│           ├── Login.jsx        # Login + Signup tabs
-│           ├── ProfileSetup.jsx # 4-step onboarding wizard
-│           ├── ProfileEdit.jsx  # Profile management screen
-│           └── Home.jsx         # Main workspace dashboard
+│           ├── Login.jsx                 # Login + Signup tabs
+│           ├── ProfileSetup.jsx          # 4-step onboarding wizard
+│           ├── ProfileEdit.jsx           # Profile management screen
+│           ├── Home.jsx                  # Main workspace dashboard
+│           ├── VerifyEmailPage.jsx       # Public email verification landing page
+│           └── EmailVerificationGate.jsx # Hard wall gating unverified sessions
 │
 ├── docker-compose.yml
 ├── .env.example
@@ -221,11 +228,13 @@ JobCraft-AI-Application-Generator/
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `POST` | `/auth/signup` | No | Register new user account |
+| `POST` | `/auth/signup` | No | Register new user account (automatically dispatches verification link) |
 | `POST` | `/auth/login` | No | Login — sets `httpOnly` auth cookies |
 | `POST` | `/auth/logout` | No | Clears auth cookies |
 | `POST` | `/auth/refresh` | Cookie | Silently rotate access + refresh tokens |
-| `GET` | `/auth/verify` | Yes | Verify active session |
+| `GET` | `/auth/verify` | Yes (lighter) | Verify active session status (returns verification status) |
+| `POST` | `/auth/send-verification` | Yes (lighter) | Generate secure token and send HTML verification link via Resend |
+| `GET` | `/auth/verify-email` | No | Public verification endpoint for token validation |
 | `POST` | `/profile/normalize` | Yes | AI-normalize raw profile text via Gemini |
 | `POST` | `/profile/save` | Yes | Save confirmed structured profile |
 | `GET` | `/profile/me` | Yes | Fetch current user's profile |
@@ -258,6 +267,8 @@ JobCraft-AI-Application-Generator/
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | ✅ | Access token lifetime |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | ✅ | Refresh token lifetime |
 | `GEMINI_API_KEY` | ✅ | Google Gemini API key |
+| `RESEND_API_KEY` | ❌ | API key for Resend email service (console fallback if empty) |
+| `FRONTEND_URL` | ❌ | Base URL of React app for links in verification emails |
 
 ---
 
@@ -267,4 +278,4 @@ JobCraft-AI-Application-Generator/
 - The `.env` file is gitignored — never commit your real secrets
 - MongoDB data persists in Docker volume `mongodb_data` between container restarts
 - The Gemini client silently tries 5 model variants in order if quota limits are hit — no manual intervention needed
-- Email verification is not yet implemented; the `email_verified` field is stored and ready for a future phase
+- Email verification is fully integrated using **Resend**; new accounts are automatically gated until their email is verified
