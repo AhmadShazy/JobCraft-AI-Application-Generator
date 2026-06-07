@@ -249,8 +249,8 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in /generate: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        print(f"[ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Document generation failed. Please try again later.")
 
 
 @app.post("/answer")
@@ -281,8 +281,8 @@ async def answer_question(request: Request, payload: AnswerRequest, current_user
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in /answer: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        print(f"[ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate answer. Please try again later.")
 
 
 @app.get("/download/{filename}")

@@ -113,10 +113,10 @@ async def normalize_profile(payload: NormalizeRequest, current_user: dict = Depe
             detail="AI normalization returned malformed data. Please try rephrasing your input."
         )
     except Exception as e:
-        print(f"[profile-normalize] Error normalizing profile: {e}")
+        print(f"[ERROR] {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Profile processing failed. Please try again later."
         )
 
 @router.post("/save")
