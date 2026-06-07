@@ -4,9 +4,15 @@ import { ToastProvider } from './context/ToastContext';
 import Login from './pages/Login';
 import ProfileSetup from './pages/ProfileSetup';
 import Home from './pages/Home';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
+  // Render verify-email page publicly if URL path matches
+  if (window.location.pathname === '/verify-email') {
+    return <VerifyEmailPage />;
+  }
+
   const { isAuthenticated, profileComplete, loading, logout } = useAuth();
 
   // 1. Initial silent refresh verification loader

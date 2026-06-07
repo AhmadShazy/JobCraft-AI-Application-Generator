@@ -71,7 +71,8 @@ def verify_session(current_user: dict = Depends(get_current_user)):
     return {
         "status": "authenticated",
         "user_id": current_user["_id"],
-        "email": current_user["email"]
+        "email": current_user["email"],
+        "email_verified": current_user.get("email_verified", False)
     }
 
 

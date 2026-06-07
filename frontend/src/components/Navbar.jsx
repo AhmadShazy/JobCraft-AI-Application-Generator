@@ -42,9 +42,9 @@ function Navbar({ onLogout, onToggleHistory, onEditProfile }) {
 
             <button
               onClick={onLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-sm font-semibold text-rose-450 hover:text-rose-400 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/40 hover:border-rose-800/60 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
+              className="flex items-center space-x-2 px-4 py-2 text-sm font-semibold text-rose-200 hover:text-rose-100 bg-rose-900 hover:bg-rose-800 border border-rose-700 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
             >
-              <LogOut className="w-4 h-4 text-rose-400" />
+              <LogOut className="w-4 h-4 text-rose-350" />
               <span>Logout</span>
             </button>
           </div>

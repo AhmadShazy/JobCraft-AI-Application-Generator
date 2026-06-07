@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [signupCredentials, setSignupCredentials] = useState(null);
   const { addToast } = useToast();
@@ -22,6 +23,7 @@ export function AuthProvider({ children }) {
       const session = await verifySession();
       setUser(session);
       setIsAuthenticated(true);
+      setEmailVerified(session.email_verified || false);
       
       const profileInfo = await getMyProfile();
       setProfileComplete(profileInfo.profile_complete);
@@ -29,8 +31,18 @@ export function AuthProvider({ children }) {
       setUser(null);
       setIsAuthenticated(false);
       setProfileComplete(false);
+      setEmailVerified(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshEmailStatus = async () => {
+    try {
+      const session = await verifySession();
+      setEmailVerified(session.email_verified || false);
+    } catch (err) {
+      console.error("Failed to refresh email status:", err);
     }
   };
 
@@ -44,6 +56,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setIsAuthenticated(false);
       setProfileComplete(false);
+      setEmailVerified(false);
     };
     return () => {
       window.handleAuthFailure = null;
@@ -71,10 +84,11 @@ export function AuthProvider({ children }) {
     setUser(null);
     setIsAuthenticated(false);
     setProfileComplete(false);
+    setEmailVerified(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, profileComplete, setProfileComplete, loading, login, signup, logout, signupCredentials, setSignupCredentials }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, profileComplete, setProfileComplete, emailVerified, setEmailVerified, refreshEmailStatus, loading, login, signup, logout, signupCredentials, setSignupCredentials }}>
       {children}
     </AuthContext.Provider>
   );

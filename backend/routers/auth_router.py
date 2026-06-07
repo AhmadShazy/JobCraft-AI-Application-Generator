@@ -1,6 +1,10 @@
+import os
 import re
-from datetime import datetime, timezone
-from fastapi import APIRouter, Response, Request, HTTPException, status
+import secrets
+import resend
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Response, Request, HTTPException, status, Depends
+from backend.dependencies import get_current_user
 from pydantic import BaseModel, EmailStr
 from backend.auth import (
     hash_password, verify_password,
@@ -49,6 +53,8 @@ async def signup(payload: SignupRequest, response: Response):
         "email": email_normalized,
         "password_hash": hashed_pwd,
         "email_verified": False,
+        "email_verification_token": None,
+        "email_verification_token_expires": None,
         "created_at": datetime.now(timezone.utc),
         "profile_complete": False,
         "profile": {},
@@ -182,3 +188,140 @@ async def refresh(request: Request, response: Response):
     
     set_auth_cookies(response, access_token, new_refresh_token)
     return {"status": "ok", "message": "Tokens refreshed successfully."}
+
+@router.post("/send-verification")
+async def send_verification(current_user: dict = Depends(get_current_user)):
+    db = get_database()
+    
+    # 1. Check if user is already verified
+    if current_user.get("email_verified", False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your email is already verified."
+        )
+        
+    # 2. Generate secure token & expiry
+    token = secrets.token_urlsafe(32)
+    # Token expires in 24 hours
+    expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+    
+    # 3. Store in DB
+    from bson import ObjectId
+    await db.users.update_one(
+        {"_id": ObjectId(current_user["_id"])},
+        {
+            "$set": {
+                "email_verification_token": token,
+                "email_verification_token_expires": expiry
+            }
+        }
+    )
+    
+    # 4. Construct URL
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    verification_url = f"{frontend_url}/verify-email?token={token}"
+    
+    # 5. Send email via Resend
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key or "your_resend_api_key" in api_key or "re_123456789" in api_key:
+        # Fallback for testing: log the verification URL to console
+        print(f"\n[resend bypass] Resend API key is not configured. Verification URL:\n{verification_url}\n")
+        return {
+            "status": "ok",
+            "message": "Verification URL generated and logged to backend console (Resend API key not configured)."
+        }
+        
+    try:
+        resend.api_key = api_key
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {{ font-family: Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }}
+    .container {{ max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }}
+    h1 {{ color: #0891b2; font-size: 24px; font-weight: bold; margin-bottom: 16px; text-align: center; }}
+    p {{ font-size: 16px; line-height: 24px; margin-bottom: 24px; text-align: center; color: #475569; }}
+    .btn-container {{ text-align: center; margin-bottom: 24px; }}
+    .btn {{ display: inline-block; background-color: #06b6d4; color: #ffffff !important; font-weight: bold; font-size: 16px; padding: 12px 24px; border-radius: 8px; text-decoration: none; text-align: center; }}
+    .btn:hover {{ background-color: #0891b2; }}
+    .fallback {{ font-size: 12px; color: #94a3b8; text-align: center; word-break: break-all; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; }}
+    .fallback a {{ color: #06b6d4; text-decoration: underline; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>JobCraft AI</h1>
+    <p>Please verify your email address to secure your account and enable full access.</p>
+    <div class="btn-container">
+      <a href="{verification_url}" class="btn" target="_blank">Verify Email Address</a>
+    </div>
+    <div class="fallback">
+      If the button above doesn't work, copy and paste this link into your browser:<br>
+      <a href="{verification_url}">{verification_url}</a>
+    </div>
+  </div>
+</body>
+</html>"""
+        
+        # Free tier default sender is onboarding@resend.dev
+        resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": current_user["email"],
+            "subject": "Verify your email address - JobCraft AI",
+            "html": html_content
+        })
+        
+        return {
+            "status": "ok",
+            "message": "Verification email sent. Check your inbox."
+        }
+    except Exception as e:
+        print(f"[resend ERROR] Failed to send verification email: {e}")
+        # Always print the URL to the console as a developer backup
+        print(f"[fallback log] Verification URL: {verification_url}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email via Resend: {str(e)}"
+        )
+
+@router.get("/verify-email")
+async def verify_email(token: str):
+    db = get_database()
+    
+    # 1. Lookup user by token
+    user = await db.users.find_one({"email_verification_token": token})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link."
+        )
+        
+    # 2. Check token expiration
+    expires = user.get("email_verification_token_expires")
+    if expires:
+        # Check if expires is naive or aware
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification link has expired. Please request a new one."
+            )
+            
+    # 3. Mark as verified
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "email_verified": True,
+                "email_verification_token": None,
+                "email_verification_token_expires": None
+            }
+        }
+    )
+    
+    return {
+        "status": "ok",
+        "message": "Email verified successfully."
+    }
+

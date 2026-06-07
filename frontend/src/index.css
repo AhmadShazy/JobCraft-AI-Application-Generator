@@ -20,7 +20,7 @@
   animation: shimmer 1.6s infinite linear;
 }
 
-/* ── Scrollbar — light cyan theme ── */
+/* ── Scrollbar — light green theme ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -31,12 +31,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #a5f3fccc;
+  background: #a7f3d0cc;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #67e8f9;
+  background: #34d399;
 }
 
 /* ── Toast slide-in ── */

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -99,6 +99,16 @@ export const answerQuestion = async (jd, question) => {
 
 export const getDownloadUrl = (filename) => {
   return `${API_BASE_URL}/download/${filename}`;
+};
+
+export const sendVerificationEmail = async () => {
+  const response = await api.post('/auth/send-verification');
+  return response.data;
+};
+
+export const verifyEmailToken = async (token) => {
+  const response = await api.get(`/auth/verify-email?token=${token}`);
+  return response.data;
 };
 
 export default api;

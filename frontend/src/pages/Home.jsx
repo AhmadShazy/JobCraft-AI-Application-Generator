@@ -5,15 +5,18 @@ import GenerateButton from '../components/GenerateButton';
 import Loader from '../components/Loader';
 import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
-import { generateDocs, answerQuestion, getHistory } from '../api/client';
+import { generateDocs, answerQuestion, getHistory, sendVerificationEmail } from '../api/client';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import ProfileEdit from './ProfileEdit';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+
 
 
 const triggerDownload = (url) => {
   const iframe = document.createElement('iframe');
   iframe.style.display = 'none';
-  iframe.src = `http://localhost:8000${url}`;
+  iframe.src = `http://localhost:8001${url}`;
   document.body.appendChild(iframe);
   setTimeout(() => {
     document.body.removeChild(iframe);
@@ -24,6 +27,27 @@ function Home({ onLogout }) {
   const [jd, setJd] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { addToast } = useToast();
+  const { emailVerified } = useAuth();
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
+  const handleSendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      await sendVerificationEmail();
+      setVerificationSent(true);
+      addToast('Verification email sent. Check your inbox.', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast(
+        err.response?.data?.detail || 
+        'Failed to send verification email. Please try again later.',
+        'error'
+      );
+    } finally {
+      setSendingVerification(false);
+    }
+  };
 
   // History state
   const [historyList, setHistoryList] = useState([]);
@@ -119,6 +143,32 @@ function Home({ onLogout }) {
         onEditProfile={() => setIsEditingProfile(true)} 
       />
 
+      {/* Verification Banner */}
+      {!emailVerified && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between gap-4 text-amber-850 text-sm animate-fade-in flex-shrink-0 font-medium">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Please verify your email address to secure your account.</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {verificationSent ? (
+              <span className="text-xs font-semibold text-amber-850 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200 animate-fade-in">
+                Verification email sent. Check your inbox.
+              </span>
+            ) : (
+              <button
+                onClick={handleSendVerification}
+                disabled={sendingVerification}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold border border-amber-300 transition-all text-xs disabled:opacity-50 cursor-pointer"
+              >
+                {sendingVerification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Send Verification Email</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
         
         {/* Dashboard Workspace — fills all remaining height */}
@@ -132,7 +182,7 @@ function Home({ onLogout }) {
               disabled={isGenerating}
             />
 
-            <div className="bg-cyan-50/15 px-5 py-4 rounded-2xl border border-accent-100/60 shadow-sm flex-shrink-0">
+            <div className="bg-slate-900 px-5 py-4 rounded-2xl border border-slate-800 shadow-md flex-shrink-0">
               <GenerateButton
                 onClick={handleGenerate}
                 disabled={isGenerating || !jd.trim()}

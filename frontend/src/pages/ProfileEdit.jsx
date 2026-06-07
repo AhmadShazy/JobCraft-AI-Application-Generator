@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getMyProfile, normalizeProfile, updateProfile } from '../api/client';
+import { getMyProfile, normalizeProfile, updateProfile, sendVerificationEmail } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { User, BookOpen, FileText, CheckSquare, Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowLeft, Save, Eye } from 'lucide-react';
@@ -49,11 +49,31 @@ const serializeVolunteering = (volList) => {
 };
 
 function ProfileEdit({ onBackToDashboard }) {
-  const { setProfileComplete } = useAuth();
+  const { setProfileComplete, emailVerified } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [normLoading, setNormLoading] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
+  const handleSendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      await sendVerificationEmail();
+      setVerificationSent(true);
+      addToast('Verification email sent. Check your inbox.', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast(
+        err.response?.data?.detail || 
+        'Failed to send verification email. Please try again later.',
+        'error'
+      );
+    } finally {
+      setSendingVerification(false);
+    }
+  };
   
   // UI Tabs for Edit view
   const [activeTab, setActiveTab] = useState('forms'); // 'forms' | 'freetext'
@@ -348,36 +368,64 @@ function ProfileEdit({ onBackToDashboard }) {
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
       
       {/* Header */}
-      <header className="bg-white border-b border-slate-200/80 py-4 px-6 flex items-center justify-between flex-shrink-0 z-10 shadow-sm">
+      <header className="bg-slate-900 border-b border-slate-800 py-4 px-6 flex items-center justify-between flex-shrink-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
-          <button onClick={onBackToDashboard} className="p-2 text-slate-500 hover:text-slate-800 transition-colors bg-white border border-slate-200 hover:border-slate-300 rounded-xl shadow-sm">
-            <ArrowLeft className="w-5 h-5" />
+          <button onClick={onBackToDashboard} className="p-2 text-slate-300 hover:text-white transition-colors bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-accent-500/50 rounded-xl shadow-sm cursor-pointer">
+            <ArrowLeft className="w-5 h-5 text-accent-400" />
           </button>
           <div>
-            <h1 className="text-lg font-extrabold text-slate-800 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-accent-500 animate-pulse" />
-              Manage Profile
+            <h1 className="text-lg font-extrabold text-white flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
+              <span className="bg-gradient-to-r from-white to-accent-300 bg-clip-text text-transparent">
+                Manage Profile
+              </span>
             </h1>
-            <p className="text-xs font-semibold text-slate-500">Edit candidate records & backgrounds</p>
+            <p className="text-xs font-semibold text-slate-400">Edit candidate records & backgrounds</p>
           </div>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner">
+        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
           <button 
             onClick={() => setActiveTab('forms')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'forms' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/20' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none focus:ring-0 ${activeTab === 'forms' ? 'bg-slate-800 text-white shadow-sm border border-slate-700 hover:border-accent-500/50' : 'text-slate-400 hover:text-white border border-transparent'}`}
           >
             Basic & Education
           </button>
           <button 
             onClick={() => setActiveTab('freetext')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'freetext' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/20' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none focus:ring-0 ${activeTab === 'freetext' ? 'bg-slate-800 text-white shadow-sm border border-slate-700 hover:border-accent-500/50' : 'text-slate-400 hover:text-white border border-transparent'}`}
           >
             Background Details (AI)
           </button>
         </div>
       </header>
+
+      {/* Verification Banner */}
+      {!emailVerified && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between gap-4 text-amber-850 text-sm animate-fade-in flex-shrink-0 font-medium">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Please verify your email address to secure your account.</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {verificationSent ? (
+              <span className="text-xs font-semibold text-amber-850 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200 animate-fade-in">
+                Verification email sent. Check your inbox.
+              </span>
+            ) : (
+              <button
+                onClick={handleSendVerification}
+                disabled={sendingVerification}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold border border-amber-300 transition-all text-xs disabled:opacity-50 cursor-pointer"
+              >
+                {sendingVerification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Send Verification Email</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto p-6 relative">
