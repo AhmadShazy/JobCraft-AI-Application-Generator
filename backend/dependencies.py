@@ -4,10 +4,11 @@ import jwt
 from backend.auth import decode_token
 from backend.database import get_database
 
-async def get_current_user(request: Request) -> dict:
+async def get_authenticated_user(request: Request) -> dict:
     """
     FastAPI dependency that reads the access_token from cookies,
     verifies it, and returns the current user from MongoDB.
+    Does not enforce email verification checks.
     """
     token = request.cookies.get("access_token")
     if not token:
@@ -57,4 +58,18 @@ async def get_current_user(request: Request) -> dict:
         
     # Convert _id to string for downstream handler convenience
     user["_id"] = str(user["_id"])
+    return user
+
+
+async def get_current_user(request: Request) -> dict:
+    """
+    FastAPI dependency that checks if the user is authenticated
+    AND checks if the user is email verified.
+    """
+    user = await get_authenticated_user(request)
+    if not user.get("email_verified", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email address before continuing.",
+        )
     return user

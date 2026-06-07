@@ -23,10 +23,15 @@ export function AuthProvider({ children }) {
       const session = await verifySession();
       setUser(session);
       setIsAuthenticated(true);
-      setEmailVerified(session.email_verified || false);
+      const isVerified = session.email_verified || false;
+      setEmailVerified(isVerified);
       
-      const profileInfo = await getMyProfile();
-      setProfileComplete(profileInfo.profile_complete);
+      if (isVerified) {
+        const profileInfo = await getMyProfile();
+        setProfileComplete(profileInfo.profile_complete);
+      } else {
+        setProfileComplete(false);
+      }
     } catch (err) {
       setUser(null);
       setIsAuthenticated(false);
