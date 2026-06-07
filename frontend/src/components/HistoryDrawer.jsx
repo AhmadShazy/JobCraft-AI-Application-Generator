@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { getDownloadUrl } from '../api/client';
 
 function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
   const [expandedJdId, setExpandedJdId] = useState(null);
@@ -85,7 +86,7 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                   {/* Redownload controls */}
                   <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-1">
                     <a
-                      href={`http://localhost:8001/download/${item.resume_filename}`}
+                      href={getDownloadUrl(item.resume_filename)}
                       download
                       className="flex items-center justify-center space-x-1 py-2 px-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-accent-600 border border-slate-200 hover:border-accent-300 rounded-lg transition-colors cursor-pointer"
                     >
@@ -93,7 +94,7 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                       <span>Resume</span>
                     </a>
                     <a
-                      href={`http://localhost:8001/download/${item.coverletter_filename}`}
+                      href={getDownloadUrl(item.coverletter_filename)}
                       download
                       className="flex items-center justify-center space-x-1 py-2 px-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-accent-600 border border-slate-200 hover:border-accent-300 rounded-lg transition-colors cursor-pointer"
                     >
