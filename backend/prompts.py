@@ -292,7 +292,7 @@ Output Requirements:
 
 JSON Schema:
 {
-  "date": "May 31, 2026",
+  "date": "Current Date (formatted like Month DD, YYYY)",
   "recipient_company": "Company Name",
   "subject": "Application for [Job Title]",
   "salutation": "Dear Hiring Team,",
@@ -311,10 +311,11 @@ Candidate Profile:
 {profile_json}
 
 Target Company Name: {company_name}
+Current Date: {current_date}
 Target Job Description:
 {jd}
 
-Generate the tailored cover letter JSON following the strict schema.
+Generate the tailored cover letter JSON following the strict schema. Use {current_date} as the "date" field in the JSON schema.
 """
 
 QA_SYSTEM_PROMPT = """

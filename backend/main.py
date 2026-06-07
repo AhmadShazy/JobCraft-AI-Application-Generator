@@ -147,9 +147,12 @@ async def generate_documents(payload: GenerateRequest, current_user: dict = Depe
         print(f"Resolved company name: {company_name}")
 
         # 3. Cover letter — uses pre-formatted profile_str (JSON string)
+        now = datetime.now()
+        current_date_str = f"{now.strftime('%B')} {now.day}, {now.year}"
         cl_user = COVER_LETTER_USER_PROMPT_TEMPLATE.format(
             profile_json=profile_str,
             company_name=company_name,
+            current_date=current_date_str,
             jd=payload.jd
         )
         print("Generating cover letter content via Gemini...")
@@ -158,6 +161,8 @@ async def generate_documents(payload: GenerateRequest, current_user: dict = Depe
         cleaned_cl_str = clean_json_response(raw_cl)
         try:
             cl_json = json.loads(cleaned_cl_str)
+            # Always guarantee the cover letter document displays the current generation date
+            cl_json["date"] = current_date_str
         except Exception as e:
             print(f"Failed to parse cover letter JSON. Raw output:\n{raw_cl}")
             raise HTTPException(
