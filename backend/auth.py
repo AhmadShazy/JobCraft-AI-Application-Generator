@@ -1,4 +1,6 @@
 import os
+ENV = os.getenv("ENV", "development")
+IS_PRODUCTION = ENV == "production"
 from datetime import datetime, timedelta, timezone
 import jwt
 import bcrypt
@@ -57,25 +59,31 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
 
 def set_auth_cookies(response, access_token: str, refresh_token: str):
-    """Sets HTTP-only Secure SameSite=None cookies for cross-domain use (Vercel + Render)."""
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=IS_PRODUCTION,
+        samesite="none" if IS_PRODUCTION else "lax",
         max_age=1800
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=IS_PRODUCTION,
+        samesite="none" if IS_PRODUCTION else "lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
     )
 
 def clear_auth_cookies(response):
-    """Deletes access and refresh cookies from the client."""
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    response.delete_cookie(
+        "access_token",
+        secure=IS_PRODUCTION,
+        samesite="none" if IS_PRODUCTION else "lax"
+    )
+    response.delete_cookie(
+        "refresh_token",
+        secure=IS_PRODUCTION,
+        samesite="none" if IS_PRODUCTION else "lax"
+    )
