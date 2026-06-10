@@ -129,7 +129,7 @@ function VerifyEmailPage() {
             </p>
             
             <div className="w-full mt-8 flex flex-col gap-2">
-              {isAuthenticated ? (
+              {isAuthenticated && (
                 <button
                   onClick={handleResend}
                   disabled={resending}
@@ -138,14 +138,13 @@ function VerifyEmailPage() {
                   {resending && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>Resend Verification Email</span>
                 </button>
-              ) : (
-                <button
-                  onClick={() => { window.location.href = '/'; }}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold tracking-wide transition-all shadow-lg active:scale-[0.98]"
-                >
-                  Go to Login Page
-                </button>
               )}
+              <button
+                onClick={() => { window.location.href = '/'; }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold tracking-wide transition-all shadow-lg active:scale-[0.98]"
+              >
+                {isAuthenticated ? 'Go to Dashboard' : 'Login to Resend Verification'}
+              </button>
             </div>
           </div>
         )}
