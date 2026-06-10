@@ -1,8 +1,8 @@
 from fastapi import Request, HTTPException, status
 from bson import ObjectId
 import jwt
-from backend.auth import decode_token
-from backend.database import get_database
+from auth import decode_token
+from database import get_database
 
 async def get_authenticated_user(request: Request) -> dict:
     """

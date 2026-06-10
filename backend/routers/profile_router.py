@@ -1,13 +1,13 @@
 import json
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
-from backend.ai_client import GeminiClient, clean_json_response
-from backend.prompts import (
+from ai_client import GeminiClient, clean_json_response
+from prompts import (
     PROFILE_NORMALIZATION_SYSTEM_PROMPT,
     PROFILE_NORMALIZATION_USER_PROMPT_TEMPLATE
 )
-from backend.dependencies import get_current_user
-from backend.database import get_database
+from dependencies import get_current_user
+from database import get_database
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 

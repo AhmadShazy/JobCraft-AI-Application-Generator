@@ -1,7 +1,7 @@
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from fastapi import Request
-from backend.auth import decode_token
+from auth import decode_token
 
 def get_user_id_key(request: Request) -> str:
     """

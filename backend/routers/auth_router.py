@@ -4,15 +4,15 @@ import secrets
 import resend
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Response, Request, HTTPException, status, Depends
-from backend.dependencies import get_current_user, get_authenticated_user
+from dependencies import get_current_user, get_authenticated_user
 from pydantic import BaseModel, EmailStr
-from backend.auth import (
+from auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
     decode_token, set_auth_cookies, clear_auth_cookies
 )
-from backend.database import get_database
-from backend.limiter import limiter
+from database import get_database
+from limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

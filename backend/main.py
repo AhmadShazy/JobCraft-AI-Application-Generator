@@ -11,21 +11,21 @@ from pydantic import BaseModel
 
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
-from backend.limiter import limiter, get_user_id_key
+from limiter import limiter, get_user_id_key
 
 # Import modules from backend package
-from backend.prompts import (
+from prompts import (
     RESUME_SYSTEM_PROMPT,
     COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_PROMPT_TEMPLATE,
     QA_SYSTEM_PROMPT, QA_USER_PROMPT_TEMPLATE,
     build_resume_prompt
 )
-from backend.ai_client import GeminiClient, clean_json_response
-from backend.generator import generate_resume_docx, generate_cover_letter_docx
-from backend.database import connect_to_mongo, close_mongo_connection, get_database
-from backend.routers.auth_router import router as auth_router
-from backend.routers.profile_router import router as profile_router
-from backend.dependencies import get_current_user, get_authenticated_user
+from ai_client import GeminiClient, clean_json_response
+from generator import generate_resume_docx, generate_cover_letter_docx
+from database import connect_to_mongo, close_mongo_connection, get_database
+from routers.auth_router import router as auth_router
+from routers.profile_router import router as profile_router
+from dependencies import get_current_user, get_authenticated_user
 
 # ─────────────────────────────────────────────
 # Path constants (resolved relative to this file)
