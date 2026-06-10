@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle, MailCheck } from 'lucide-react';
 
 function Login() {
   const { login, signup, signupCredentials } = useAuth();
@@ -13,6 +13,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
@@ -43,8 +45,16 @@ function Login() {
     try {
       if (activeTab === 'login') {
         await login(email, password);
+        setSignupSuccess(false);
       } else {
         await signup(email, password);
+        // Show a persistent inline banner — toasts can vanish before the user reads them
+        setSignupEmail(email);
+        setSignupSuccess(true);
+        setActiveTab('login');
+        setPassword('');
+        setConfirmPassword('');
+        addToast('Account created! Check your email to verify.', 'success');
       }
     } catch (err) {
       console.error(err);
@@ -114,6 +124,25 @@ function Login() {
             Create Account
           </button>
         </div>
+
+        {/* Email verification success banner */}
+        {signupSuccess && (
+          <div className="mx-6 mt-5 flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-sm">
+            <MailCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm font-semibold leading-snug">
+              <span className="block font-extrabold text-emerald-700 mb-0.5">Account created!</span>
+              A verification link has been sent to <span className="underline underline-offset-2">{signupEmail}</span>. Please check your email and verify your account before logging in.
+            </div>
+            <button
+              type="button"
+              onClick={() => setSignupSuccess(false)}
+              className="flex-shrink-0 text-emerald-400 hover:text-emerald-600 transition-colors focus:outline-none"
+              aria-label="Dismiss"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
