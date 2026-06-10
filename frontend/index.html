@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Tailored, ATS-optimized resumes, cover letters, and Q&A answers generator powered by AI." />
     <title>JobCraft AI | Tailored Resumes & AI Application Builder</title>
+  <script>
+    fetch('https://jobcraft-ai-backend.onrender.com/auth/verify', {
+      method: 'GET',
+      credentials: 'include'
+    }).catch(() => {});
+  </script>
   </head>
   <body>
     <div id="root"></div>
