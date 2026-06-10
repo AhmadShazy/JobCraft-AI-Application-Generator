@@ -57,21 +57,21 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
 
 def set_auth_cookies(response, access_token: str, refresh_token: str):
-    """Sets HTTP-only Secure SameSite=Lax cookies on the response."""
+    """Sets HTTP-only Secure SameSite=None cookies for cross-domain use (Vercel + Render)."""
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
-        samesite="lax",
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        samesite="none",
+        max_age=1800
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
     )
 
