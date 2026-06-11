@@ -64,7 +64,7 @@ def set_auth_cookies(response, access_token: str, refresh_token: str):
         value=access_token,
         httponly=True,
         secure=IS_PRODUCTION,
-        samesite="none" if IS_PRODUCTION else "lax",
+        samesite="lax",
         max_age=1800
     )
     response.set_cookie(
@@ -72,7 +72,7 @@ def set_auth_cookies(response, access_token: str, refresh_token: str):
         value=refresh_token,
         httponly=True,
         secure=IS_PRODUCTION,
-        samesite="none" if IS_PRODUCTION else "lax",
+        samesite="lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
     )
 
@@ -80,10 +80,10 @@ def clear_auth_cookies(response):
     response.delete_cookie(
         "access_token",
         secure=IS_PRODUCTION,
-        samesite="none" if IS_PRODUCTION else "lax"
+        samesite="lax"
     )
     response.delete_cookie(
         "refresh_token",
         secure=IS_PRODUCTION,
-        samesite="none" if IS_PRODUCTION else "lax"
+        samesite="lax"
     )
