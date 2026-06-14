@@ -1,6 +1,6 @@
 def serialize_profile(profile: dict) -> str:
     lines = []
-    lines.append(f"Name: {profile.get('name', 'Ahmad Sheraz')}")
+    lines.append(f"Name: {profile.get('name', '')}")
     lines.append(f"Email: {profile.get('email', '')}")
     lines.append(f"Phone: {profile.get('phone', '')}")
     lines.append(f"Location: {profile.get('location', '')}")
@@ -190,7 +190,7 @@ Output ONLY the tagline text.
 === SUMMARY ===
 Write a professional summary tailored to this specific role:
 - Must open with the strongest relevant point matching the JD focus.
-- Mention 2-3 relevant projects from the candidate profile by name (e.g., LUMINA, Intelligent Emotion Detection, AI Face Recognition, Income Predictor, or E-Commerce Backend).
+- Mention 2-3 relevant projects from the candidate profile that best match the JD focus.
 - Use JD keywords directly and naturally.
 - Close with a role-specific intent statement. No generic or filler phrases. Every sentence must add value.
 
@@ -211,7 +211,7 @@ Job Title | Company Name | Location | Duration
 - Bullet point 1
 - Bullet point 2
 Separate multiple entries with an empty line.
-- For the WEBBUGGS internship, you MUST rewrite the bullets using exact JD keywords and terminology — do not copy them as-is.
+- For each experience entry, rewrite the bullets using exact JD keywords and terminology — do not copy them as-is.
 - Lead with the responsibility/bullet that is most relevant to this specific JD.
 - Every bullet point must start with a strong action verb.
 
@@ -224,7 +224,6 @@ Separate multiple entries with an empty line.
 - Score and prioritize the projects based on JD relevance. Reorder them so the most relevant project is listed first.
 - The top 2 most relevant projects must be given stronger, deeper bullet points that directly mirror the JD language.
 - Every project entry must have between 2 (minimum) and 4 (maximum) bullet points.
-- STRICT RULE: You must always preserve the supervisor line for the "LUMINA — Emotionally Intelligent Virtual Assistant" project exactly as: "- Supervised by Dr. Usama Ijaz Bajwa, Associate Professor, COMSATS University Islamabad". Do not delete, truncate, or rewrite this line.
 
 === EDUCATION ===
 Format every education entry exactly as:
@@ -255,7 +254,6 @@ STRICT RULES THAT MUST ALWAYS BE FOLLOWED
 - Never skip any resume section. (All 9 sections must be present).
 - Never truncate or summarize any bullet point. (Do not output ellipses or shortened lines).
 - Never add fictional experience or skills. (Ground all achievements in the provided candidate profile).
-- Never remove the supervisor line from the LUMINA project.
 - Every bullet point must start with a strong action verb (except the supervisor line).
 - Only use keywords that exist in the JD.
 - No commentary or explanation in the output. Only return the formatted sections.
@@ -285,8 +283,8 @@ Output Requirements:
 1. Return ONLY a valid JSON object matching the JSON schema below. Do not include markdown code block formatting (like ```json ... ```), just the raw JSON.
 2. Structure the letter into four paragraphs:
    - Paragraph 1 (Opening): State the position applied for, target company name, and express enthusiasm.
-   - Paragraph 2 (Technical Experience): Mention 2-3 specific projects from Ahmad's profile (like LUMINA, Intelligent Emotion Detection, or AI Face Recognition) that fit the job.
-   - Paragraph 3 (Soft Skills & Value): Emphasize fast learning, teamwork, and how internship experience at WEBBUGGS prepared him to deliver results.
+   - Paragraph 2 (Technical Experience): Mention 2-3 specific projects from the candidate's profile that are most relevant to the job.
+   - Paragraph 3 (Soft Skills & Value): Emphasize fast learning, teamwork, and how the candidate's internship or work experience prepared them to deliver results.
    - Paragraph 4 (Closing): Professional wrap-up, call to action, and link to GitHub/LinkedIn.
 3. Reference the company name explicitly.
 
@@ -302,7 +300,7 @@ JSON Schema:
     "Paragraph 3 text",
     "Paragraph 4 text"
   ],
-  "sign_off": "Sincerely,\\n\\nAhmad Sheraz"
+  "sign_off": "Sincerely,\\n\\n{candidate_name}"
 }
 """
 
@@ -319,7 +317,7 @@ Generate the tailored cover letter JSON following the strict schema. Use {curren
 """
 
 QA_SYSTEM_PROMPT = """
-You are a helpful AI assistant supporting a candidate, Ahmad Sheraz, with job application questions.
+You are a helpful AI assistant supporting a job applicant with their job application questions.
 You are given the Candidate Profile, the target Job Description, and a specific application question.
 
 Instructions:
@@ -328,7 +326,7 @@ Instructions:
    - "max 500 characters" / "500 chars limit"
    - "in 100 words or less" / "under 150 words"
    - "in 2-3 sentences"
-2. Write a highly professional response that answers the question accurately using Ahmad's real projects and skills.
+2. Write a highly professional response that answers the question accurately using the candidate's actual projects and skills from the provided profile.
 3. Keep the answer strictly within the detected limit if one exists.
 4. Output ONLY the copy-paste ready answer text. Do not include any intros (like "Here is the answer:") or explanation.
 """

@@ -183,6 +183,9 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
             cl_json = json.loads(cleaned_cl_str)
             # Always guarantee the cover letter document displays the current generation date
             cl_json["date"] = current_date_str
+            candidate_name = profile_data.get("name", "")
+            if "sign_off" in cl_json:
+                cl_json["sign_off"] = cl_json["sign_off"].replace("{candidate_name}", candidate_name)
         except Exception as e:
             print(f"Failed to parse cover letter JSON. Raw output:\n{raw_cl}")
             raise HTTPException(
