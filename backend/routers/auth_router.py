@@ -89,7 +89,7 @@ async def send_verification_email_helper(user_id: str, email: str) -> str:
 </html>"""
         
         resend.Emails.send({
-            "from": "onboarding@resend.dev",
+            "from": os.getenv("RESEND_FROM", "onboarding@resend.dev"),
             "to": email,
             "subject": "Verify your email address - JobCraft AI",
             "html": html_content
