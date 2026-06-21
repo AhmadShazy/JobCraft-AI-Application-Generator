@@ -99,7 +99,7 @@ async def normalize_profile(payload: NormalizeRequest, current_user: dict = Depe
         )
         
         client = GeminiClient()
-        raw_response = client.generate(PROFILE_NORMALIZATION_SYSTEM_PROMPT, user_prompt)
+        raw_response = client.generate(PROFILE_NORMALIZATION_SYSTEM_PROMPT, user_prompt, task="normalize")
         cleaned_json_str = clean_json_response(raw_response)
         
         # Parse output to verify it is valid JSON

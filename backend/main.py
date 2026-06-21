@@ -119,7 +119,7 @@ def detect_company_name(jd: str) -> str:
         "If the company name is not mentioned, unclear, or cannot be determined, return 'unknown'."
     )
     try:
-        response = client.generate(sys_prompt, jd)
+        response = client.generate(sys_prompt, jd, task="detect")
         name = re.sub(r'["\'\`\.]', '', response.strip()).strip()
         return name if name and name.lower() != "unknown" else "unknown"
     except Exception as e:
@@ -158,7 +158,7 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
         # 1. Resume — uses pre-built prompt from profile_data (dict)
         resume_user = build_resume_prompt(profile_data, payload.jd)
         print("Generating resume content via Gemini...")
-        raw_resume = client.generate(RESUME_SYSTEM_PROMPT, resume_user)
+        raw_resume = client.generate(RESUME_SYSTEM_PROMPT, resume_user, task="resume")
 
         # 2. Company name resolution
         company_name = payload.company_name.strip() if payload.company_name else None
@@ -176,7 +176,7 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
             jd=payload.jd
         )
         print("Generating cover letter content via Gemini...")
-        raw_cl = client.generate(COVER_LETTER_SYSTEM_PROMPT, cl_user)
+        raw_cl = client.generate(COVER_LETTER_SYSTEM_PROMPT, cl_user, task="cover_letter")
 
         cleaned_cl_str = clean_json_response(raw_cl)
         try:
@@ -278,7 +278,7 @@ async def answer_question(request: Request, payload: AnswerRequest, current_user
         )
 
         print("Answering question via Gemini...")
-        answer = client.generate(QA_SYSTEM_PROMPT, qa_user)
+        answer = client.generate(QA_SYSTEM_PROMPT, qa_user, task="qa")
         return {"answer": answer.strip()}
 
     except HTTPException:
