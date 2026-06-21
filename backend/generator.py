@@ -35,6 +35,25 @@ def apply_font_settings(run, name="Arial", size_pt=10, color_rgb=(0, 0, 0), bold
     run.bold = bold
     run.italic = italic
 
+def add_markdown_runs(paragraph, text, size_pt=10, default_bold=False, default_italic=False, color_rgb=(0, 0, 0)):
+    """
+    Parses simple markdown bold (**) and italic (*) and adds them as formatted runs to the paragraph.
+    """
+    # Split text on **bold** or *italic* tags
+    tokens = re.split(r'(\*\*.*?\*\*|\*.*?\*)', text)
+    for token in tokens:
+        if not token:
+            continue
+        if token.startswith('**') and token.endswith('**'):
+            run = paragraph.add_run(token[2:-2])
+            apply_font_settings(run, size_pt=size_pt, bold=True, italic=default_italic, color_rgb=color_rgb)
+        elif token.startswith('*') and token.endswith('*'):
+            run = paragraph.add_run(token[1:-1])
+            apply_font_settings(run, size_pt=size_pt, bold=default_bold, italic=True, color_rgb=color_rgb)
+        else:
+            run = paragraph.add_run(token)
+            apply_font_settings(run, size_pt=size_pt, bold=default_bold, italic=default_italic, color_rgb=color_rgb)
+
 def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str):
     """
     Generates an ATS-friendly tailored resume in .docx format by parsing
@@ -82,12 +101,15 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
     location = profile_data.get("location", "")
     linkedin = profile_data.get("linkedin", "")
     github = profile_data.get("github", "")
+    portfolio = profile_data.get("portfolio", "")
     
     contact_parts = [email, phone, location]
     if linkedin:
         contact_parts.append(linkedin)
     if github:
         contact_parts.append(github)
+    if portfolio:
+        contact_parts.append(portfolio)
     
     contact_text = " | ".join([p for p in contact_parts if p])
     
@@ -120,8 +142,7 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
             summary_p = doc.add_paragraph()
             summary_p.paragraph_format.space_after = Pt(8)
             summary_p.paragraph_format.line_spacing = 1.15
-            summary_run = summary_p.add_run(section_content)
-            apply_font_settings(summary_run, size_pt=10)
+            add_markdown_runs(summary_p, section_content, size_pt=10)
 
         elif "SKILL" in section_name:
             skills_title_p = doc.add_paragraph()
@@ -167,8 +188,7 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
                     bullet_p = doc.add_paragraph(style='List Bullet')
                     bullet_p.paragraph_format.space_after = Pt(2)
                     bullet_p.paragraph_format.line_spacing = 1.1
-                    bullet_run = bullet_p.add_run(bullet)
-                    apply_font_settings(bullet_run, size_pt=10)
+                    add_markdown_runs(bullet_p, bullet, size_pt=10)
                 elif "|" in line:
                     job_parts = [p.strip() for p in line.split("|")]
                     title = job_parts[0] if len(job_parts) > 0 else ""
@@ -212,8 +232,7 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
                     bullet_p = doc.add_paragraph(style='List Bullet')
                     bullet_p.paragraph_format.space_after = Pt(2)
                     bullet_p.paragraph_format.line_spacing = 1.1
-                    bullet_run = bullet_p.add_run(bullet)
-                    apply_font_settings(bullet_run, size_pt=10)
+                    add_markdown_runs(bullet_p, bullet, size_pt=10)
                 elif "|" in line:
                     proj_parts = [p.strip() for p in line.split("|")]
                     name = proj_parts[0] if len(proj_parts) > 0 else ""
@@ -322,8 +341,7 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
                     bullet_p = doc.add_paragraph(style='List Bullet')
                     bullet_p.paragraph_format.space_after = Pt(2)
                     bullet_p.paragraph_format.line_spacing = 1.1
-                    bullet_run = bullet_p.add_run(bullet)
-                    apply_font_settings(bullet_run, size_pt=10)
+                    add_markdown_runs(bullet_p, bullet, size_pt=10)
                 elif "|" in line:
                     vol_parts = [p.strip() for p in line.split("|")]
                     role = vol_parts[0] if len(vol_parts) > 0 else ""
@@ -428,8 +446,7 @@ def generate_cover_letter_docx(cl_data: dict, name: str, email: str, phone: str,
         p = doc.add_paragraph()
         p.paragraph_format.space_after = Pt(12)
         p.paragraph_format.line_spacing = 1.15
-        p_run = p.add_run(para_text)
-        apply_font_settings(p_run, size_pt=10)
+        add_markdown_runs(p, para_text, size_pt=10)
 
     # 7. Sign-off
     sign_p = doc.add_paragraph()

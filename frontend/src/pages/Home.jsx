@@ -23,8 +23,9 @@ const triggerDownload = (url) => {
   }, 2000);
 };
 
-function Home({ onLogout }) {
+function Home({ onLogout, darkMode, toggleDarkMode }) {
   const [jd, setJd] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { addToast } = useToast();
   const { emailVerified } = useAuth();
@@ -83,7 +84,7 @@ function Home({ onLogout }) {
     setIsGenerating(true);
 
     try {
-      const data = await generateDocs(jd.trim());
+      const data = await generateDocs(jd.trim(), companyName.trim());
       // Auto-refresh history lists so the generated item is added instantly
       fetchHistory();
 
@@ -132,7 +133,7 @@ function Home({ onLogout }) {
   };
 
   if (isEditingProfile) {
-    return <ProfileEdit onBackToDashboard={() => setIsEditingProfile(false)} />;
+    return <ProfileEdit onBackToDashboard={() => setIsEditingProfile(false)} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
   }
 
   return (
@@ -141,6 +142,8 @@ function Home({ onLogout }) {
         onLogout={onLogout} 
         onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} 
         onEditProfile={() => setIsEditingProfile(true)} 
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
       />
 
       {/* Verification Banner */}
@@ -179,6 +182,8 @@ function Home({ onLogout }) {
             <JDInput
               jd={jd}
               setJd={setJd}
+              companyName={companyName}
+              setCompanyName={setCompanyName}
               disabled={isGenerating}
             />
 

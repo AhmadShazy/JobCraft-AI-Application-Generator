@@ -42,7 +42,7 @@ function CopyButton({ text }) {
 /* ── AI answer bubble with embedded copy button ── */
 function AnswerBubble({ answer }) {
   return (
-    <div className="relative group bg-white border border-slate-200 text-slate-800 p-3 pr-8 rounded-2xl rounded-tl-none text-sm font-medium whitespace-pre-wrap shadow-sm">
+    <div className="relative group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 p-3 pr-8 rounded-2xl rounded-tl-none text-sm font-medium whitespace-pre-wrap shadow-sm">
       {answer}
       <CopyButton text={answer} />
     </div>
@@ -83,7 +83,7 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {qaList.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-              <div className="p-4 bg-white text-cyan-600 border border-cyan-100/60 rounded-2xl shadow-sm">
+              <div className="p-4 bg-white dark:bg-slate-800 text-cyan-600 border border-cyan-100/60 dark:border-slate-700 rounded-2xl shadow-sm">
                 <Bot className="w-8 h-8 text-accent-500 animate-pulse" />
               </div>
               <div className="max-w-xs space-y-1">
@@ -91,7 +91,7 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
                 <p className="text-xs text-slate-500 font-semibold">
                   Paste a Job Description and ask questions like:
                 </p>
-                <p className="text-[11px] text-slate-600 bg-white border border-cyan-100 p-2 rounded-lg italic shadow-sm">
+                <p className="text-[11px] text-slate-600 dark:text-slate-350 bg-white dark:bg-slate-800 border border-cyan-100 dark:border-slate-700 p-2 rounded-lg italic shadow-sm">
                   "Why are you interested in this role? (max 500 characters)"
                 </p>
               </div>
@@ -114,7 +114,7 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
                 {/* AI Response */}
                 <div className="flex justify-start">
                   <div className="max-w-[85%] flex items-start space-x-2">
-                    <div className="p-1.5 bg-white border border-cyan-100/60 text-accent-500 rounded-full flex-shrink-0 mt-1 shadow-sm">
+                    <div className="p-1.5 bg-white dark:bg-slate-800 border border-cyan-100/60 dark:border-slate-700 text-accent-500 rounded-full flex-shrink-0 mt-1 shadow-sm">
                       <Bot className="w-3.5 h-3.5" />
                     </div>
                     <AnswerBubble answer={item.answer} />
@@ -128,10 +128,10 @@ function QAPanel({ qaList, onSendQuestion, isLoading }) {
           {isLoading && (
             <div className="flex justify-start">
               <div className="max-w-[85%] flex items-start space-x-2">
-                <div className="p-1.5 bg-white border border-cyan-100/60 text-accent-500 rounded-full flex-shrink-0 mt-1 shadow-sm">
+                <div className="p-1.5 bg-white dark:bg-slate-800 border border-cyan-100/60 dark:border-slate-700 text-accent-500 rounded-full flex-shrink-0 mt-1 shadow-sm">
                   <Bot className="w-3.5 h-3.5" />
                 </div>
-                <div className="bg-white border border-cyan-100/60 text-slate-600 p-3 rounded-2xl rounded-tl-none text-sm font-medium flex items-center space-x-1.5 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border border-cyan-100/60 dark:border-slate-700 text-slate-600 dark:text-slate-300 p-3 rounded-2xl rounded-tl-none text-sm font-medium flex items-center space-x-1.5 shadow-sm">
                   <span className="w-2 h-2 bg-accent-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
                   <span className="w-2 h-2 bg-accent-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                   <span className="w-2 h-2 bg-accent-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>

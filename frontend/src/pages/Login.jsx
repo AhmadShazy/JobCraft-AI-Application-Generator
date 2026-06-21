@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle, Sun, Moon } from 'lucide-react';
 
-function Login() {
+function Login({ darkMode, toggleDarkMode }) {
   const { login, signup, signupCredentials } = useAuth();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('login');
@@ -66,16 +66,28 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-y-auto">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 relative overflow-y-auto transition-colors duration-200">
+
+      {/* Theme Toggle in top-right */}
+      <div className="absolute top-4 right-4 z-20">
+        <button
+          type="button"
+          onClick={toggleDarkMode}
+          className="flex items-center justify-center p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
+          title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {darkMode ? <Sun className="w-4 h-4 text-amber-500 animate-pulse" /> : <Moon className="w-4 h-4 text-accent-500" />}
+        </button>
+      </div>
 
       {/* Ambient background glows */}
-      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/12 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 dark:bg-primary-500/3 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/12 dark:bg-accent-500/5 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
 
-      <div className="w-full max-w-md bg-cyan-100/40 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-accent-200/60 border-t-4 border-t-accent-500 relative z-10 my-8">
+      <div className="w-full max-w-md bg-cyan-100/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-accent-200/60 dark:border-slate-800 border-t-4 border-t-accent-500 relative z-10 my-8">
 
         {/* Header */}
-        <div className="p-8 pb-6 text-center bg-cyan-100/60 text-slate-800 relative border-b border-accent-200/60">
+        <div className="p-8 pb-6 text-center bg-cyan-100/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 relative border-b border-accent-200/60 dark:border-slate-800">
           <div className="absolute top-4 right-4">
             <Sparkles className="w-5 h-5 text-accent-500 animate-pulse" />
           </div>
@@ -88,17 +100,17 @@ function Login() {
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
             JobCraft AI
           </h1>
-          <p className="mt-2 text-slate-500 text-sm font-semibold">Personal Job Application Assistant</p>
+          <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm font-semibold">Personal Job Application Assistant</p>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-accent-200/60 bg-cyan-100/30">
+        <div className="flex border-b border-accent-200/60 dark:border-slate-800 bg-cyan-100/30 dark:bg-slate-900/10">
           <button
             onClick={() => setActiveTab('login')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'login'
-                ? 'border-accent-500 text-accent-700 bg-cyan-100/40'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
+                ? 'border-accent-500 text-accent-700 dark:text-accent-400 bg-cyan-100/40 dark:bg-slate-900/20'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
             }`}
           >
             Log In
@@ -107,8 +119,8 @@ function Login() {
             onClick={() => setActiveTab('signup')}
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'signup'
-                ? 'border-accent-500 text-accent-700 bg-cyan-100/40'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
+                ? 'border-accent-500 text-accent-700 dark:text-accent-400 bg-cyan-100/40 dark:bg-slate-900/20'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
             }`}
           >
             Create Account
@@ -120,11 +132,11 @@ function Login() {
 
           {/* Email */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="email">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" htmlFor="email">
               Email Address
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 dark:text-slate-500">
                 <Mail className="w-4 h-4" />
               </span>
               <input
@@ -133,7 +145,7 @@ function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                 placeholder="you@example.com"
               />
             </div>
@@ -141,11 +153,11 @@ function Login() {
 
           {/* Password */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="password">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" htmlFor="password">
               Password
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 dark:text-slate-500">
                 <Lock className="w-4 h-4" />
               </span>
               <input
@@ -154,10 +166,10 @@ function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
+                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                 placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -167,11 +179,11 @@ function Login() {
           {activeTab === 'signup' && (
             <>
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="confirmPassword">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" htmlFor="confirmPassword">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 dark:text-slate-500">
                     <Lock className="w-4 h-4" />
                   </span>
                   <input
@@ -180,28 +192,28 @@ function Login() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all text-slate-800 placeholder-slate-400 font-medium"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                     placeholder="••••••••"
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none">
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {/* Password rules */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs font-bold">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs font-bold">
                 <div className="flex items-center space-x-2">
-                  {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-slate-300" />}
-                  <span className={hasMinLength ? 'text-slate-700' : 'text-slate-400'}>At least 8 characters</span>
+                  {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-accent-400" /> : <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600" />}
+                  <span className={hasMinLength ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}>At least 8 characters</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {hasNumber ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-slate-300" />}
-                  <span className={hasNumber ? 'text-slate-700' : 'text-slate-400'}>Contains at least one number</span>
+                  {hasNumber ? <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-accent-400" /> : <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600" />}
+                  <span className={hasNumber ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}>Contains at least one number</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-600" /> : <XCircle className="w-4 h-4 text-rose-500" />}
-                  <span className={passwordsMatch ? 'text-slate-700' : 'text-rose-500'}>Passwords match</span>
+                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-accent-400" /> : <XCircle className="w-4 h-4 text-rose-500 dark:text-rose-455" />}
+                  <span className={passwordsMatch ? 'text-slate-700 dark:text-slate-300' : 'text-rose-500 dark:text-rose-400'}>Passwords match</span>
                 </div>
               </div>
             </>
@@ -211,7 +223,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-primary-700 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white font-extrabold rounded-xl shadow-lg shadow-accent-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
+            className="w-full py-3 bg-gradient-to-r from-primary-700 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white font-extrabold rounded-xl shadow-lg shadow-accent-500/20 dark:shadow-accent-500/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
           >
             {loading ? (
               <span>Processing...</span>

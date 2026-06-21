@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import asyncio
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from bson import ObjectId
@@ -36,6 +38,33 @@ OUTPUTS_DIR  = os.path.join(BASE_DIR, "outputs")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 
+async def cleanup_outputs_task():
+    """Background task to delete docx files older than 24 hours from the outputs folder every hour."""
+    while True:
+        try:
+            print("[cleanup task] Scanning outputs folder for old files...")
+            now = time.time()
+            cutoff = now - (24 * 3600)  # 24 hours ago
+            
+            if os.path.exists(OUTPUTS_DIR):
+                for filename in os.listdir(OUTPUTS_DIR):
+                    if filename.endswith(".docx"):
+                        file_path = os.path.join(OUTPUTS_DIR, filename)
+                        try:
+                            # Get modification time
+                            mtime = os.path.getmtime(file_path)
+                            if mtime < cutoff:
+                                os.remove(file_path)
+                                print(f"[cleanup task] Deleted old file: {filename}")
+                        except Exception as file_err:
+                            print(f"[cleanup task] Error accessing/deleting {filename}: {file_err}")
+        except Exception as e:
+            print(f"[cleanup task ERROR] Error in cleanup task loop: {e}")
+        
+        # Sleep for an hour
+        await asyncio.sleep(3600)
+
+
 # ─────────────────────────────────────────────
 # Lifespan — runs at server start / stop
 # ─────────────────────────────────────────────
@@ -48,9 +77,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[mongodb startup ERROR] Could not connect to MongoDB: {e}")
 
+    # Start the clean-up task in the background
+    cleanup_task = asyncio.create_task(cleanup_outputs_task())
+
     yield  # server is running here
 
     # ── SHUTDOWN ──
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
     await close_mongo_connection()
 
 
@@ -220,7 +257,8 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
         links = [
             l for l in [
                 profile_data.get("linkedin", ""),
-                profile_data.get("github", "")
+                profile_data.get("github", ""),
+                profile_data.get("portfolio", "")
             ] if l
         ]
         generate_cover_letter_docx(

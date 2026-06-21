@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased min-h-screen font-sans;
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen font-sans transition-colors duration-200;
   }
 }
 
@@ -20,7 +20,7 @@
   animation: shimmer 1.6s infinite linear;
 }
 
-/* ── Scrollbar — light green theme ── */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -35,8 +35,16 @@
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #34d399;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
 }
 
 /* ── Toast slide-in ── */

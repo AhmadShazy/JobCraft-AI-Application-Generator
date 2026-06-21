@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { normalizeProfile, saveProfile } from '../api/client';
-import { User, BookOpen, FileText, CheckSquare, Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { User, BookOpen, FileText, CheckSquare, Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowRight, ArrowLeft, Sun, Moon } from 'lucide-react';
 
 const CATEGORY_LABELS = {
   languages: 'Languages',
@@ -13,7 +13,7 @@ const CATEGORY_LABELS = {
   concepts: 'Concepts',
 };
 
-function ProfileSetup() {
+function ProfileSetup({ darkMode, toggleDarkMode }) {
   const { setProfileComplete, logout } = useAuth();
   const { addToast } = useToast();
   const [step, setStep] = useState(1);
@@ -181,7 +181,7 @@ function ProfileSetup() {
   };
 
   return (
-    <div className="h-screen w-full bg-slate-50 text-slate-800 flex flex-col select-none relative overflow-hidden">
+    <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col select-none relative overflow-hidden transition-colors duration-200">
       
       {/* Background Accent */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-60 bg-gradient-to-b from-primary-500/5 to-transparent blur-3xl pointer-events-none"></div>
@@ -189,12 +189,23 @@ function ProfileSetup() {
       {/* Header section (fixed at top): Title + Stepper */}
       <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-2 flex-shrink-0 z-10">
         {/* Title */}
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent flex items-center justify-center gap-2">
-            <Sparkles className="w-5.5 h-5.5 text-accent-500 animate-pulse" />
-            Candidate Profile Setup
-          </h1>
-          <p className="text-slate-500 font-semibold text-xs mt-0.5">Let's build your professional profile. v2.0</p>
+        <div className="flex justify-between items-center mb-4">
+          <div className="w-10"></div> {/* Spacer */}
+          <div className="text-center">
+            <h1 className="text-2xl font-extrabold bg-gradient-to-r from-primary-600 to-accent-500 dark:from-accent-400 dark:to-cyan-300 bg-clip-text text-transparent flex items-center justify-center gap-2">
+              <Sparkles className="w-5.5 h-5.5 text-accent-500 dark:text-accent-400 animate-pulse" />
+              Candidate Profile Setup
+            </h1>
+            <p className="text-slate-505 dark:text-slate-400 font-semibold text-xs mt-0.5">Let's build your professional profile. v2.0</p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            className="flex items-center justify-center p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
+            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {darkMode ? <Sun className="w-4 h-4 text-amber-500 animate-pulse" /> : <Moon className="w-4 h-4 text-accent-500" />}
+          </button>
         </div>
 
         {/* Progress Stepper */}
@@ -213,10 +224,10 @@ function ProfileSetup() {
                 key={idx}
                 className={`flex flex-col items-center py-2 rounded-xl border transition-all duration-200 ${
                   active 
-                    ? 'bg-accent-50 border-accent-500/80 shadow-sm text-accent-600 font-bold' 
+                    ? 'bg-accent-50 dark:bg-slate-900/60 border-accent-500/80 dark:border-accent-500 text-accent-600 dark:text-accent-450 font-bold shadow-sm' 
                     : completed 
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm shadow-emerald-500/5' 
-                    : 'bg-slate-100/50 border-slate-200 text-slate-400'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 shadow-sm shadow-emerald-500/5' 
+                    : 'bg-slate-100/50 dark:bg-slate-900/10 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600'
                 }`}
               >
                 <Icon className="w-4 h-4 mb-0.5" />
@@ -229,7 +240,7 @@ function ProfileSetup() {
 
       {/* Middle scrollable content area */}
       <div className="flex-1 w-full max-w-4xl mx-auto px-4 overflow-y-auto z-10 pb-6 pt-2">
-        <div className="bg-cyan-100/40 backdrop-blur-md border border-accent-200/60 border-t-4 border-t-accent-500 rounded-2xl shadow-md p-6 md:p-8 min-h-full">
+        <div className="bg-cyan-100/40 dark:bg-slate-900/40 backdrop-blur-md border border-accent-200/60 dark:border-slate-800 border-t-4 border-t-accent-500 rounded-2xl shadow-md p-6 md:p-8 min-h-full">
           
           {/* Step Views */}
           <div className="h-full">
@@ -550,7 +561,7 @@ function ProfileSetup() {
       </div>
 
       {/* Footer controls (fixed at bottom of screen) */}
-      <div className="w-full bg-white border-t border-slate-200/80 py-4 px-4 z-20 flex-shrink-0">
+      <div className="w-full bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 py-4 px-4 z-20 flex-shrink-0">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
             {step === 1 ? (
