@@ -60,8 +60,8 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                   <FileText className="w-6 h-6" />
                 </div>
                 <div className="max-w-xs space-y-1">
-                  <h4 className="font-bold text-slate-800 dark:text-slate-150 text-sm">No history records</h4>
-                  <p className="text-xs text-slate-505 dark:text-slate-500 font-semibold">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">No history records</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                      Once you generate resumes and cover letters, they will be logged here for easy access.
                   </p>
                 </div>
@@ -88,7 +88,7 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                     <a
                       href={getDownloadUrl(item.resume_filename)}
                       download
-                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 hover:text-accent-600 border border-slate-200 dark:border-slate-700 hover:border-accent-300 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Resume</span>
@@ -96,7 +96,7 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                     <a
                       href={getDownloadUrl(item.coverletter_filename)}
                       download
-                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 hover:text-accent-600 border border-slate-200 dark:border-slate-700 hover:border-accent-300 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Cover Letter</span>
@@ -115,7 +115,7 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
                       </button>
                       
                       {expandedJdId === item.id && (
-                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-350 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg max-h-40 overflow-y-auto font-medium whitespace-pre-wrap select-all">
+                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg max-h-40 overflow-y-auto font-medium whitespace-pre-wrap select-all">
                           {item.jd}
                         </div>
                       )}

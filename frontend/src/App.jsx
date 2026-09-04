@@ -45,22 +45,31 @@ function AppContent({ darkMode, toggleDarkMode }) {
   return <Home onLogout={logout} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
 }
 
+// Mirrors the pre-paint script in index.html — keep the two in sync.
+// An explicit choice in localStorage wins; otherwise follow the OS setting.
+function resolveTheme() {
+  try {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'dark' || stored === 'light') return stored === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch {
+    return false;
+  }
+}
+
 function App() {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
+  const [darkMode, setDarkMode] = useState(resolveTheme);
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+    document.documentElement.classList.toggle('dark', darkMode);
+    try {
+      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+    } catch {
+      /* storage unavailable — the class is still applied for this session */
     }
   }, [darkMode]);
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
   return (
     <ToastProvider>

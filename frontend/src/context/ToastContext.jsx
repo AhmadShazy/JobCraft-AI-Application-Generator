@@ -39,22 +39,21 @@ export function ToastProvider({ children }) {
 function ToastItem({ toast, onClose }) {
   const { message, type } = toast;
   
-  // Icon and colors based on type
+  // Toasts stay dark in both themes; in dark mode they lift one step off the
+  // page background so they don't melt into it.
+  const bgColor = 'bg-slate-900 dark:bg-slate-800 border-slate-700 dark:border-slate-600 text-slate-100';
+
   let icon = <Info className="w-5 h-5" />;
-  let bgColor = 'bg-slate-900 border-slate-800 text-slate-100';
   let iconColor = 'text-blue-400';
-  
+
   if (type === 'success') {
     icon = <CheckCircle className="w-5 h-5" />;
-    bgColor = 'bg-slate-900 border-slate-800 text-slate-100';
     iconColor = 'text-emerald-400';
   } else if (type === 'error') {
     icon = <AlertCircle className="w-5 h-5" />;
-    bgColor = 'bg-slate-900 border-slate-800 text-slate-100';
     iconColor = 'text-rose-400';
   } else if (type === 'warning') {
     icon = <AlertTriangle className="w-5 h-5" />;
-    bgColor = 'bg-slate-900 border-slate-800 text-slate-100';
     iconColor = 'text-amber-400';
   }
 
@@ -70,7 +69,7 @@ function ToastItem({ toast, onClose }) {
       </div>
       <button
         onClick={onClose}
-        className="flex-shrink-0 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+        className="flex-shrink-0 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
       >
         <X className="w-4 h-4" />
       </button>

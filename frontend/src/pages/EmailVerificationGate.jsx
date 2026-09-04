@@ -55,22 +55,22 @@ function EmailVerificationGate({ darkMode, toggleDarkMode }) {
       </div>
 
       {/* Ambient background glows */}
-      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 dark:bg-primary-500/3 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/12 dark:bg-accent-500/5 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/[0.08] dark:bg-primary-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/[0.12] dark:bg-accent-500/5 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
 
       <div className="w-full max-w-md bg-cyan-100/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-accent-200/60 dark:border-slate-800 border-t-4 border-t-accent-500 relative z-10 my-8">
         
         {/* Header */}
         <div className="p-8 pb-6 text-center bg-cyan-100/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 relative border-b border-accent-200/60 dark:border-slate-800">
           <div className="flex justify-center mb-3">
-            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-md shadow-primary-500/25 animate-bounce">
+            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 dark:from-accent-500 dark:to-accent-600 rounded-2xl shadow-md shadow-primary-500/25 dark:shadow-accent-500/25 animate-bounce">
               <Mail className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 dark:from-white dark:to-accent-300 bg-clip-text text-transparent">
             Verify Your Email
           </h1>
-          <p className="mt-2 text-slate-505 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider">Security Setup</p>
+          <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider">Security Setup</p>
         </div>
 
         {/* Content Body */}
@@ -80,7 +80,7 @@ function EmailVerificationGate({ darkMode, toggleDarkMode }) {
           </p>
 
           {resendStatus === 'sent' && (
-            <div className="text-xs font-semibold text-amber-850 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 px-3 py-2.5 rounded-xl animate-fade-in">
+            <div className="text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-3 py-2.5 rounded-xl animate-fade-in">
               Email sent. Check your inbox.
             </div>
           )}
@@ -97,9 +97,9 @@ function EmailVerificationGate({ darkMode, toggleDarkMode }) {
 
             <button
               onClick={logout}
-              className="w-full py-3 bg-rose-900 hover:bg-rose-800 border border-rose-700 text-rose-200 hover:text-rose-100 font-extrabold rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center space-x-2 cursor-pointer"
+              className="w-full py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800/80 text-rose-600 hover:text-rose-700 dark:text-rose-200 dark:hover:text-rose-100 font-extrabold rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center space-x-2 cursor-pointer"
             >
-              <LogOut className="w-4 h-4 text-rose-350" />
+              <LogOut className="w-4 h-4 text-rose-500 dark:text-rose-300" />
               <span>Logout</span>
             </button>
           </div>

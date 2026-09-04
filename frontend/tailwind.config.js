@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -35,28 +36,7 @@ export default {
           900: '#164e63',
           950: '#083344',
         },
-        /* 
-          ─── BACKUP OPTION 3: Cherry Crimson & Honey Gold ───
-          primary: {
-            50:  '#fff1f2',
-            100: '#ffe4e6',
-            200: '#fecdd3',
-            300: '#fda4af',
-            400: '#fb7185',
-            500: '#f43f5e', // Cherry/Rose
-            ...
-          },
-          accent: {
-            50:  '#fffbeb',
-            100: '#fef3c7',
-            200: '#fde68a',
-            300: '#fcd34d',
-            400: '#fbbf24',
-            500: '#f59e0b', // Gold
-            ...
-          }
-        */
-        // ─── Navy — Retained for fallback references, mapped to neutral slates for light theme ───
+        // ─── Navy — Retained for fallback references ───
         navy: {
           50:  '#f8fafc',
           100: '#f1f5f9',
@@ -78,4 +58,3 @@ export default {
   },
   plugins: [],
 }
-

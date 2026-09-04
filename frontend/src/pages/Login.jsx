@@ -81,8 +81,8 @@ function Login({ darkMode, toggleDarkMode }) {
       </div>
 
       {/* Ambient background glows */}
-      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/8 dark:bg-primary-500/3 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/12 dark:bg-accent-500/5 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary-500/[0.08] dark:bg-primary-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-accent-500/[0.12] dark:bg-accent-500/5 rounded-full blur-3xl pointer-events-none" style={{ animationDelay: '2s' }} />
 
       <div className="w-full max-w-md bg-cyan-100/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-accent-200/60 dark:border-slate-800 border-t-4 border-t-accent-500 relative z-10 my-8">
 
@@ -93,11 +93,11 @@ function Login({ darkMode, toggleDarkMode }) {
           </div>
           {/* Logo icon */}
           <div className="flex justify-center mb-3">
-            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-md shadow-primary-500/25">
+            <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 dark:from-accent-500 dark:to-accent-600 rounded-2xl shadow-md shadow-primary-500/25 dark:shadow-accent-500/25">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-accent-500 dark:from-white dark:to-accent-300 bg-clip-text text-transparent">
             JobCraft AI
           </h1>
           <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm font-semibold">Personal Job Application Assistant</p>
@@ -110,7 +110,7 @@ function Login({ darkMode, toggleDarkMode }) {
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'login'
                 ? 'border-accent-500 text-accent-700 dark:text-accent-400 bg-cyan-100/40 dark:bg-slate-900/20'
-                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             Log In
@@ -120,7 +120,7 @@ function Login({ darkMode, toggleDarkMode }) {
             className={`flex-1 py-3.5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === 'signup'
                 ? 'border-accent-500 text-accent-700 dark:text-accent-400 bg-cyan-100/40 dark:bg-slate-900/20'
-                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             Create Account
@@ -145,7 +145,7 @@ function Login({ darkMode, toggleDarkMode }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                 placeholder="you@example.com"
               />
             </div>
@@ -166,7 +166,7 @@ function Login({ darkMode, toggleDarkMode }) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
+                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                 placeholder="••••••••"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none">
@@ -192,7 +192,7 @@ function Login({ darkMode, toggleDarkMode }) {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium"
                     placeholder="••••••••"
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none">
@@ -212,7 +212,7 @@ function Login({ darkMode, toggleDarkMode }) {
                   <span className={hasNumber ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}>Contains at least one number</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-accent-400" /> : <XCircle className="w-4 h-4 text-rose-500 dark:text-rose-455" />}
+                  {passwordsMatch ? <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-accent-400" /> : <XCircle className="w-4 h-4 text-rose-500 dark:text-rose-400" />}
                   <span className={passwordsMatch ? 'text-slate-700 dark:text-slate-300' : 'text-rose-500 dark:text-rose-400'}>Passwords match</span>
                 </div>
               </div>

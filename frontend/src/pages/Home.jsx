@@ -148,21 +148,21 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
 
       {/* Verification Banner */}
       {!emailVerified && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between gap-4 text-amber-850 text-sm animate-fade-in flex-shrink-0 font-medium">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 flex items-center justify-between gap-4 text-amber-900 dark:text-amber-300 text-sm animate-fade-in flex-shrink-0 font-medium transition-colors duration-200">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
             <span>Please verify your email address to secure your account.</span>
           </div>
           <div className="flex items-center gap-3">
             {verificationSent ? (
-              <span className="text-xs font-semibold text-amber-850 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200 animate-fade-in">
+              <span className="text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800 animate-fade-in">
                 Verification email sent. Check your inbox.
               </span>
             ) : (
               <button
                 onClick={handleSendVerification}
                 disabled={sendingVerification}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold border border-amber-300 transition-all text-xs disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-semibold border border-amber-300 dark:border-amber-800 transition-all text-xs disabled:opacity-50 cursor-pointer"
               >
                 {sendingVerification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>Send Verification Email</span>
@@ -187,7 +187,7 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
               disabled={isGenerating}
             />
 
-            <div className="bg-slate-900 px-5 py-4 rounded-2xl border border-slate-800 shadow-md flex-shrink-0">
+            <div className="bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex-shrink-0 transition-colors duration-200">
               <GenerateButton
                 onClick={handleGenerate}
                 disabled={isGenerating || !jd.trim()}

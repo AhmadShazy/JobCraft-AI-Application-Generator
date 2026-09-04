@@ -6,6 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Tailored, ATS-optimized resumes, cover letters, and Q&A answers generator powered by AI." />
     <title>JobCraft AI | Tailored Resumes & AI Application Builder</title>
+    <!--
+      Applies the stored theme BEFORE first paint. React sets the same class from a
+      useEffect, which only runs after the first render — without this blocking
+      script a dark-mode user sees a white flash on every reload.
+      Must stay in sync with the resolveTheme() logic in src/App.jsx.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var dark = stored
+            ? stored === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {
+          /* private mode / storage disabled — fall through to light */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

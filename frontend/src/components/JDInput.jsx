@@ -3,12 +3,12 @@ import { FileText, Building2 } from 'lucide-react';
 
 function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {
   return (
-    <div className="flex flex-col flex-1 overflow-hidden bg-cyan-100/40 backdrop-blur-md px-5 pt-4 pb-3 rounded-2xl border border-accent-200/60 border-t-4 border-t-accent-500 shadow-md">
+    <div className="flex flex-col flex-1 overflow-hidden bg-cyan-100/40 dark:bg-slate-900/40 backdrop-blur-md px-5 pt-4 pb-3 rounded-2xl border border-accent-200/60 dark:border-slate-800 border-t-4 border-t-accent-500 shadow-md transition-colors duration-200">
 
       {/* Company Name (Optional) */}
       <div className="mb-4 flex-shrink-0">
-        <label className="text-sm font-bold text-slate-800 flex items-center space-x-2 mb-2" htmlFor="company-name">
-          <Building2 className="w-4.5 h-4.5 text-primary-500" />
+        <label className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2 mb-2" htmlFor="company-name">
+          <Building2 className="w-4.5 h-4.5 text-primary-500 dark:text-accent-400" />
           <span>Company Name (Optional)</span>
         </label>
         <input
@@ -18,13 +18,13 @@ function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
           placeholder="e.g. Google, Stripe, etc. (Leave blank for auto-detection)"
-          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all rounded-xl text-slate-800 font-medium placeholder-slate-400 disabled:opacity-50"
+          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 transition-all rounded-xl text-slate-800 dark:text-slate-100 font-medium placeholder-slate-400 dark:placeholder-slate-500 disabled:opacity-50"
         />
       </div>
 
       {/* Label */}
-      <label className="text-sm font-bold text-slate-800 flex items-center space-x-2 mb-2 flex-shrink-0" htmlFor="jd">
-        <FileText className="w-4.5 h-4.5 text-primary-500" />
+      <label className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2 mb-2 flex-shrink-0" htmlFor="jd">
+        <FileText className="w-4.5 h-4.5 text-primary-500 dark:text-accent-400" />
         <span>Job Description (JD)</span>
       </label>
 
@@ -35,7 +35,7 @@ function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {
         value={jd}
         onChange={(e) => setJd(e.target.value)}
         placeholder="Paste the full job description details here (skills, responsibilities, requirements)..."
-        className="flex-1 w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-accent-500 focus:ring-2 focus:ring-accent-100 transition-all rounded-xl text-slate-800 font-medium placeholder-slate-400 resize-none disabled:opacity-50 overflow-y-auto"
+        className="flex-1 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-accent-500 focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 transition-all rounded-xl text-slate-800 dark:text-slate-100 font-medium placeholder-slate-400 dark:placeholder-slate-500 resize-none disabled:opacity-50 overflow-y-auto"
       />
 
     </div>
