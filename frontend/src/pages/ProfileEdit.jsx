@@ -505,7 +505,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
                     </select>
                     {languages.length > 1 && (
                       <button type="button" onClick={() => removeLanguage(idx)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
-                        <Trash2 className="w-4.5 h-4.5" />
+                        <Trash2 className="w-[18px] h-[18px]" />
                       </button>
                     )}
                   </div>
@@ -526,7 +526,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
                   <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-cyan-100/60 dark:border-slate-800 rounded-xl space-y-4 relative animate-fade-in">
                     {educations.length > 1 && (
                       <button type="button" onClick={() => removeEducation(idx)} className="absolute top-2 right-2 p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
-                        <Trash2 className="w-4.5 h-4.5" />
+                        <Trash2 className="w-[18px] h-[18px]" />
                       </button>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -565,7 +565,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
                 disabled={saveLoading}
                 className="flex items-center gap-1.5 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-500/10 transition-all duration-200"
               >
-                {saveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4.5 h-4.5" />}
+                {saveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-[18px] h-[18px]" />}
                 <span>Save Basic & Education info</span>
               </button>
             </div>
@@ -623,7 +623,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
                 disabled={normLoading}
                 className="flex items-center gap-1.5 px-6 py-3 bg-gradient-to-r from-primary-700 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white font-extrabold rounded-xl text-sm shadow-md shadow-accent-500/20 focus:outline-none focus:ring-2 focus:ring-accent-500 transition-all duration-200"
               >
-                {normLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4.5 h-4.5" />}
+                {normLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-[18px] h-[18px]" />}
                 <span>Preview Background with AI</span>
               </button>
             </div>
@@ -641,7 +641,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
             <div className="p-6 border-b border-slate-200/60 dark:border-slate-800 flex justify-between items-center flex-shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                  <Sparkles className="w-4.5 h-4.5 text-accent-500 dark:text-accent-400 animate-pulse" />
+                  <Sparkles className="w-[18px] h-[18px] text-accent-500 dark:text-accent-400 animate-pulse" />
                   Review Structured Changes
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Gemini successfully parsed your text. Verify and click save.</p>

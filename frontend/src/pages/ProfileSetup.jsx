@@ -193,7 +193,7 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
           <div className="w-10"></div> {/* Spacer */}
           <div className="text-center">
             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-primary-600 to-accent-500 dark:from-accent-400 dark:to-cyan-300 bg-clip-text text-transparent flex items-center justify-center gap-2">
-              <Sparkles className="w-5.5 h-5.5 text-accent-500 dark:text-accent-400 animate-pulse" />
+              <Sparkles className="w-[22px] h-[22px] shrink-0 text-accent-500 dark:text-accent-400 animate-pulse" />
               Candidate Profile Setup
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-semibold text-xs mt-0.5">Let's build your professional profile. v2.0</p>
@@ -429,7 +429,7 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
             <div className="space-y-6">
               <div className="flex justify-between items-center bg-gradient-to-r from-slate-50 via-slate-50 to-cyan-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/40 p-4 rounded-xl border border-cyan-100/60 dark:border-slate-800 mb-6">
                 <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <Sparkles className="w-4.5 h-4.5 text-accent-500 dark:text-accent-400 animate-pulse" />
+                  <Sparkles className="w-[18px] h-[18px] text-accent-500 dark:text-accent-400 animate-pulse" />
                   Step 4 — AI Normalization Review
                 </h2>
               </div>

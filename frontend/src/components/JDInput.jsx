@@ -8,7 +8,7 @@ function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {
       {/* Company Name (Optional) */}
       <div className="mb-4 flex-shrink-0">
         <label className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2 mb-2" htmlFor="company-name">
-          <Building2 className="w-4.5 h-4.5 text-primary-500 dark:text-accent-400" />
+          <Building2 className="w-[18px] h-[18px] text-primary-500 dark:text-accent-400" />
           <span>Company Name (Optional)</span>
         </label>
         <input
@@ -24,7 +24,7 @@ function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {
 
       {/* Label */}
       <label className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2 mb-2 flex-shrink-0" htmlFor="jd">
-        <FileText className="w-4.5 h-4.5 text-primary-500 dark:text-accent-400" />
+        <FileText className="w-[18px] h-[18px] text-primary-500 dark:text-accent-400" />
         <span>Job Description (JD)</span>
       </label>
 

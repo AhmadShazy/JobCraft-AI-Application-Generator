@@ -11,7 +11,7 @@ function DownloadPanel({ resumeUrl, coverletterUrl }) {
   return (
     <div className="space-y-3 bg-cyan-100/40 dark:bg-slate-900/40 p-6 rounded-2xl border border-cyan-300 dark:border-slate-800 shadow-sm transition-colors duration-200">
       <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2 mb-1">
-        <FileText className="w-4.5 h-4.5 text-cyan-500 dark:text-accent-400" />
+        <FileText className="w-[18px] h-[18px] text-cyan-500 dark:text-accent-400" />
         <span>Generated Artifacts</span>
       </h3>
       
