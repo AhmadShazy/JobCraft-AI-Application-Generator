@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Building2 } from 'lucide-react';
 
 function JDInput({ jd, setJd, companyName, setCompanyName, disabled }) {

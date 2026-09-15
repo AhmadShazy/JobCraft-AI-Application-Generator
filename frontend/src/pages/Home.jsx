@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import JDInput from '../components/JDInput';
 import GenerateButton from '../components/GenerateButton';
@@ -61,11 +61,6 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
   // Profile Edit toggle state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // Load history on mount
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
   const fetchHistory = async () => {
     try {
       const data = await getHistory();
@@ -74,6 +69,13 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
       console.error('Failed to retrieve history logs:', err);
     }
   };
+
+  // Load history on mount. fetchHistory sets state after an await, not synchronously
+  // during render, so this is not the cascading-render case the rule targets.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchHistory();
+  }, []);
 
   const handleGenerate = async () => {
     if (!jd.trim()) {

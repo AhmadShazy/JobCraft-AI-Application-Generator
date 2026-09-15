@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import Login from './pages/Login';
@@ -9,11 +9,6 @@ import EmailVerificationGate from './pages/EmailVerificationGate';
 import { Loader2 } from 'lucide-react';
 
 function AppContent({ darkMode, toggleDarkMode }) {
-  // Render verify-email page publicly if URL path matches
-  if (window.location.pathname === '/verify-email') {
-    return <VerifyEmailPage />;
-  }
-
   const { isAuthenticated, emailVerified, profileComplete, loading, logout } = useAuth();
 
   // 1. Initial silent refresh verification loader
@@ -71,11 +66,23 @@ function App() {
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
+  // Read once: this app has no client-side router, so the path cannot change
+  // without a full reload.
+  const isVerifyEmailRoute = window.location.pathname === '/verify-email';
+
   return (
     <ToastProvider>
       <AuthProvider>
         <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-200">
-          <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+          {/*
+            The verify-email link is opened by people who may not be logged in, so it
+            bypasses the auth gate. The check lives here rather than inside AppContent
+            because an early return there would make its useAuth() call conditional,
+            changing the hook order between renders.
+          */}
+          {isVerifyEmailRoute
+            ? <VerifyEmailPage />
+            : <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
         </div>
       </AuthProvider>
     </ToastProvider>

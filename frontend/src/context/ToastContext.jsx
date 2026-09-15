@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 
 const ToastContext = createContext(null);
@@ -77,4 +77,7 @@ function ToastItem({ toast, onClose }) {
   );
 }
 
+// The hook is deliberately co-located with its provider; this rule only affects
+// Fast Refresh granularity, not runtime behaviour.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = () => useContext(ToastContext);

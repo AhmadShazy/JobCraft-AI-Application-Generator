@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle, Sun, Moon } from 'lucide-react';
@@ -18,8 +18,12 @@ function Login({ darkMode, toggleDarkMode }) {
   const hasNumber = /\d/.test(password);
   const passwordsMatch = activeTab === 'login' || (password === confirmPassword && password.length > 0);
 
+  // Mirrors credentials handed over by AuthContext after a signup attempt so the form
+  // stays filled if the user lands back here. Syncing from an external store is what
+  // effects are for; the rule cannot tell this apart from derived state.
   useEffect(() => {
     if (signupCredentials?.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(signupCredentials.email);
       setPassword(signupCredentials.password);
       setConfirmPassword(signupCredentials.password);

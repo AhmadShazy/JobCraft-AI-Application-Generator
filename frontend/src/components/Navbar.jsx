@@ -1,4 +1,3 @@
-import React from 'react';
 import { LogOut, Briefcase, History, User, Sun, Moon } from 'lucide-react';
 
 function Navbar({ onLogout, onToggleHistory, onEditProfile, darkMode, toggleDarkMode }) {

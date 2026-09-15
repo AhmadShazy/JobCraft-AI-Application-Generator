@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { verifyEmailToken, sendVerificationEmail } from '../api/client';
 import { useToast } from '../context/ToastContext';
@@ -7,31 +7,30 @@ import { Loader2, CheckCircle2, XCircle, Mail, ArrowRight } from 'lucide-react';
 function VerifyEmailPage() {
   const { isAuthenticated, refreshEmailStatus } = useAuth();
   const { addToast } = useToast();
-  const [status, setStatus] = useState('loading'); // 'loading', 'success', 'error'
-  const [errorMessage, setErrorMessage] = useState('');
+
+  // The token lives in the URL, which cannot change without a reload, so a missing
+  // token is knowable before the first render. Deriving the initial state here rather
+  // than correcting it in an effect avoids rendering the "Verifying..." state for one
+  // frame and then immediately replacing it with the error.
+  const token = new URLSearchParams(window.location.search).get('token');
+
+  const [status, setStatus] = useState(token ? 'loading' : 'error'); // 'loading', 'success', 'error'
+  const [errorMessage, setErrorMessage] = useState(
+    token ? '' : 'No verification token was provided in the link.'
+  );
   const [resending, setResending] = useState(false);
-  const [token, setToken] = useState('');
 
   const verificationInitiated = useRef(false);
 
   useEffect(() => {
+    if (!token) return;
+    // Guards against StrictMode's intentional double-invoke in development.
     if (verificationInitiated.current) return;
     verificationInitiated.current = true;
 
-    const queryParams = new URLSearchParams(window.location.search);
-    const tokenVal = queryParams.get('token');
-    
-    if (!tokenVal) {
-      setStatus('error');
-      setErrorMessage('No verification token was provided in the link.');
-      return;
-    }
-
-    setToken(tokenVal);
-
     const performVerification = async () => {
       try {
-        await verifyEmailToken(tokenVal);
+        await verifyEmailToken(token);
         setStatus('success');
         // If authenticated, refresh email status in global AuthContext instantly
         await refreshEmailStatus();
@@ -46,7 +45,7 @@ function VerifyEmailPage() {
     };
 
     performVerification();
-  }, []);
+  }, [token, refreshEmailStatus]);
 
   const handleResend = async () => {
     if (!isAuthenticated) {

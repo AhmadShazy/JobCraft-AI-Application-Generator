@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getMyProfile, normalizeProfile, updateProfile, sendVerificationEmail } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { User, BookOpen, FileText, CheckSquare, Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowLeft, Save, Eye, Sun, Moon } from 'lucide-react';
+import { Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowLeft, Save, Eye, Sun, Moon } from 'lucide-react';
 
 const CATEGORY_LABELS = {
   languages: 'Languages',

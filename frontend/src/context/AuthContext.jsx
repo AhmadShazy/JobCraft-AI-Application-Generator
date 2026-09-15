@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { verifySession, loginUser, signupUser, logoutUser, getMyProfile } from '../api/client';
 import { useToast } from './ToastContext';
 
@@ -18,7 +18,10 @@ export function AuthProvider({ children }) {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);
 
-  const checkAuth = async () => {
+  // Memoised: EmailVerificationGate puts refreshEmailStatus in a setInterval effect's
+  // dependency list, so an unstable identity would tear down and restart its 5s poll on
+  // every AuthProvider render. Both close over nothing but stable setters and imports.
+  const checkAuth = useCallback(async () => {
     try {
       const session = await verifySession();
       setUser(session);
@@ -32,7 +35,7 @@ export function AuthProvider({ children }) {
       } else {
         setProfileComplete(false);
       }
-    } catch (err) {
+    } catch {
       setUser(null);
       setIsAuthenticated(false);
       setProfileComplete(false);
@@ -40,18 +43,21 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshEmailStatus = async () => {
+  const refreshEmailStatus = useCallback(async () => {
     try {
       const session = await verifySession();
       setEmailVerified(session.email_verified || false);
     } catch (err) {
       console.error("Failed to refresh email status:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Async session restore on mount: state is set after an await, not synchronously
+    // during render, so this is not the cascading-render case the rule targets.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkAuth();
     // Register global handler for axios auth failures (silent refresh failures)
     window.handleAuthFailure = () => {
@@ -66,7 +72,7 @@ export function AuthProvider({ children }) {
     return () => {
       window.handleAuthFailure = null;
     };
-  }, [addToast]);
+  }, [addToast, checkAuth]);
 
   const login = async (email, password) => {
     await loginUser(email, password);
@@ -99,4 +105,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// The hook is deliberately co-located with its provider; this rule only affects
+// Fast Refresh granularity, not runtime behaviour.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
