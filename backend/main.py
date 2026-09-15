@@ -107,8 +107,23 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Too many requests. Please wait before trying again."}
     )
 
+# Keep the configured deployment origin while supporting both loopback hostnames
+# during local development. Browsers treat localhost and 127.0.0.1 as different
+# origins, which matters for the credentialed requests this API relies on.
+#
+# The loopback origins are added ONLY outside production. allow_credentials=True
+# below means that any page served from a user's own localhost:5173 would
+# otherwise be able to make credentialed cross-origin calls to the deployed API
+# and read the responses. Deployments must set APP_ENV=production.
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-allow_origins = [origin.strip() for origin in frontend_url.split(",")] if frontend_url else ["http://localhost:5173", "http://127.0.0.1:5173"]
+configured_origins = [origin.strip() for origin in frontend_url.split(",") if origin.strip()]
+local_dev_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+if APP_ENV == "production":
+    allow_origins = list(dict.fromkeys(configured_origins))
+else:
+    allow_origins = list(dict.fromkeys([*configured_origins, *local_dev_origins]))
 
 app.add_middleware(
     CORSMiddleware,
