@@ -68,6 +68,7 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(false);
       setProfileComplete(false);
       setEmailVerified(false);
+      setSignupCredentials(null); // never leave a plaintext password in memory after a session ends
     };
     return () => {
       window.handleAuthFailure = null;
@@ -96,6 +97,7 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(false);
     setProfileComplete(false);
     setEmailVerified(false);
+    setSignupCredentials(null); // clear cached signup password on logout (shared-machine safety)
   };
 
   return (

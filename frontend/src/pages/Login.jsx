@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { requestPasswordReset } from '../api/client';
 import { Lock, Mail, Sparkles, Eye, EyeOff, CheckCircle2, XCircle, Sun, Moon } from 'lucide-react';
 
 function Login({ darkMode, toggleDarkMode }) {
   const { login, signup, signupCredentials } = useAuth();
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState('login');
+  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
@@ -33,6 +35,24 @@ function Login({ darkMode, toggleDarkMode }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (activeTab === 'forgot') {
+      setLoading(true);
+      try {
+        await requestPasswordReset(email);
+        setForgotSent(true);
+        addToast('If an account exists for that email, a reset link has been sent.', 'success');
+      } catch (err) {
+        console.error(err);
+        // Endpoint is intentionally non-enumerating; show the same generic line.
+        setForgotSent(true);
+        addToast('If an account exists for that email, a reset link has been sent.', 'success');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (activeTab === 'signup') {
       if (!hasMinLength || !hasNumber) {
         addToast('Password must be at least 8 characters and include one number.', 'error');
@@ -52,18 +72,9 @@ function Login({ darkMode, toggleDarkMode }) {
       }
     } catch (err) {
       console.error(err);
-      const detail = err.response?.data?.detail;
-      let errMsg = 'Something went wrong. Please try again.';
-      if (detail) {
-        if (detail.includes('No account found')) {
-          errMsg = 'No account found with this email. Please sign up.';
-        } else if (detail.includes('Incorrect password') || detail.includes('Incorrect email or password')) {
-          errMsg = 'Incorrect email or password. Please try again.';
-        } else {
-          errMsg = detail;
-        }
-      }
-      addToast(errMsg, 'error');
+      // The backend returns a single generic credential message on purpose
+      // (no account enumeration), so just surface its detail as-is.
+      addToast(err.response?.data?.detail || 'Something went wrong. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -155,7 +166,8 @@ function Login({ darkMode, toggleDarkMode }) {
             </div>
           </div>
 
-          {/* Password */}
+          {/* Password (hidden in forgot-password mode) */}
+          {activeTab !== 'forgot' && (
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" htmlFor="password">
               Password
@@ -177,7 +189,28 @@ function Login({ darkMode, toggleDarkMode }) {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {activeTab === 'login' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('forgot'); setForgotSent(false); }}
+                  className="text-xs font-bold text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition-colors cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
           </div>
+          )}
+
+          {/* Forgot-password helper text */}
+          {activeTab === 'forgot' && (
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 -mt-2">
+              {forgotSent
+                ? 'If an account exists for that email, a reset link is on its way. Check your inbox.'
+                : "Enter your account email and we'll send you a password reset link."}
+            </p>
+          )}
 
           {/* Confirm Password (signup only) */}
           {activeTab === 'signup' && (
@@ -232,9 +265,22 @@ function Login({ darkMode, toggleDarkMode }) {
             {loading ? (
               <span>Processing...</span>
             ) : (
-              <span>{activeTab === 'login' ? 'Login to Workspace' : 'Get Started'}</span>
+              <span>
+                {activeTab === 'login' ? 'Login to Workspace' : activeTab === 'signup' ? 'Get Started' : 'Send Reset Link'}
+              </span>
             )}
           </button>
+
+          {/* Back to login from forgot mode */}
+          {activeTab === 'forgot' && (
+            <button
+              type="button"
+              onClick={() => { setActiveTab('login'); setForgotSent(false); }}
+              className="w-full text-center text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors cursor-pointer"
+            >
+              Back to Login
+            </button>
+          )}
         </form>
       </div>
     </div>

@@ -6,6 +6,7 @@ import ProfileSetup from './pages/ProfileSetup';
 import Home from './pages/Home';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import EmailVerificationGate from './pages/EmailVerificationGate';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { Loader2 } from 'lucide-react';
 
 function AppContent({ darkMode, toggleDarkMode }) {
@@ -55,33 +56,48 @@ function resolveTheme() {
 function App() {
   const [darkMode, setDarkMode] = useState(resolveTheme);
 
+  // Apply the class for this render. We do NOT persist here — persisting on the
+  // first mount would write an explicit 'light'/'dark' derived from the OS and
+  // then stop following OS changes even though the user never chose. Persistence
+  // happens only in toggleDarkMode, on an explicit user action.
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
-    try {
-      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-    } catch {
-      /* storage unavailable — the class is still applied for this session */
-    }
   }, [darkMode]);
 
-  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('theme', next ? 'dark' : 'light');
+      } catch {
+        /* storage unavailable — the class is still applied for this session */
+      }
+      return next;
+    });
+  };
 
   // Read once: this app has no client-side router, so the path cannot change
-  // without a full reload.
-  const isVerifyEmailRoute = window.location.pathname === '/verify-email';
+  // without a full reload. These public routes bypass the auth gate.
+  const path = window.location.pathname;
+  const isVerifyEmailRoute = path === '/verify-email';
+  const isResetPasswordRoute = path === '/reset-password';
+
+  let publicPage = null;
+  if (isVerifyEmailRoute) publicPage = <VerifyEmailPage />;
+  else if (isResetPasswordRoute) publicPage = <ResetPasswordPage darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
 
   return (
     <ToastProvider>
       <AuthProvider>
         <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-200">
           {/*
-            The verify-email link is opened by people who may not be logged in, so it
-            bypasses the auth gate. The check lives here rather than inside AppContent
-            because an early return there would make its useAuth() call conditional,
-            changing the hook order between renders.
+            Verify-email and reset-password links are opened by people who may not be
+            logged in, so they bypass the auth gate. The check lives here rather than
+            inside AppContent because an early return there would make its useAuth()
+            call conditional, changing the hook order between renders.
           */}
-          {isVerifyEmailRoute
-            ? <VerifyEmailPage />
+          {publicPage
+            ? publicPage
             : <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
         </div>
       </AuthProvider>

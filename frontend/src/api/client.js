@@ -103,6 +103,27 @@ export const getDownloadUrl = (filename) => {
   return `${API_BASE_URL}/download/${filename}`;
 };
 
+// Download a generated document through axios (so it carries the auth cookie and
+// the silent-refresh interceptor, and works whether the API is same-origin or
+// cross-site). Throws on 403/404/etc. so the caller can surface an error toast,
+// unlike the old hidden-iframe approach which failed silently.
+export const downloadDocument = async (url) => {
+  const response = await api.get(url, { responseType: 'blob' });
+  const disposition = response.headers['content-disposition'] || '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const filename = match ? decodeURIComponent(match[1]) : url.split('/').pop() || 'document.docx';
+
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
+  return filename;
+};
+
 export const sendVerificationEmail = async () => {
   const response = await api.post('/auth/send-verification');
   return response.data;
@@ -110,6 +131,33 @@ export const sendVerificationEmail = async () => {
 
 export const verifyEmailToken = async (token) => {
   const response = await api.get(`/auth/verify-email?token=${token}`);
+  return response.data;
+};
+
+// Password reset
+export const requestPasswordReset = async (email) => {
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data;
+};
+
+export const resetPassword = async (token, password) => {
+  const response = await api.post('/auth/reset-password', { token, password });
+  return response.data;
+};
+
+// Device / session management
+export const listSessions = async () => {
+  const response = await api.get('/auth/sessions');
+  return response.data;
+};
+
+export const revokeSession = async (sid) => {
+  const response = await api.delete(`/auth/sessions/${sid}`);
+  return response.data;
+};
+
+export const revokeOtherSessions = async () => {
+  const response = await api.post('/auth/sessions/revoke-others');
   return response.data;
 };
 
