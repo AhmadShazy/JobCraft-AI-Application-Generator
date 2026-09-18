@@ -1,0 +1,45 @@
+# Render Blueprint for the JobCraft AI backend.
+#
+# The backend is deployed at api.jobcraft.ahmadsheraz.com (Render), fronted by the
+# Vercel app which proxies /api/* to it. This file makes that deployment
+# reproducible from the repo instead of living only in the Render dashboard.
+#
+# Secrets (MONGO_URI, GEMINI_API_KEY, RESEND_API_KEY, FRONTEND_URL, ...) are set
+# in the Render dashboard (sync: false), never committed.
+services:
+  - type: web
+    name: jobcraft-ai-api
+    runtime: python
+    plan: free
+    # Single worker keeps the in-memory rate limiter's counters global. Add a
+    # shared storage backend (e.g. Redis) before scaling to more workers.
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn backend.main:app -k uvicorn.workers.UvicornWorker --workers 1 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true      # generated once and persisted; never the placeholder
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

@@ -34,9 +34,11 @@ It also features a built-in **Q&A assistant** that answers screening questions i
 | Backend | FastAPI (Python 3.10+) |
 | Database | MongoDB via Motor (async) |
 | AI | Google Gemini API (5-model fallback chain) |
-| Auth | JWT (PyJWT) + bcrypt via passlib |
+| Auth | JWT (PyJWT) + bcrypt (used directly) |
+| Rate limiting | slowapi (per-user / per-IP) |
 | Document Generation | python-docx |
 | Local DB | Docker (MongoDB container) |
+| Prod servers | Frontend on Vercel, backend on Render (gunicorn + uvicorn worker) |
 
 ---
 
@@ -181,11 +183,13 @@ Click **Edit Profile** in the navbar:
 JobCraft-AI-Application-Generator/
 │
 ├── backend/
-│   ├── main.py                  # FastAPI app — /generate, /answer, /download, /history
-│   ├── ai_client.py             # Gemini client with 5-model fallback chain
-│   ├── auth.py                  # JWT creation/verification, bcrypt hashing
-│   ├── database.py              # Motor async MongoDB connection
-│   ├── dependencies.py          # get_current_user FastAPI dependency
+│   ├── config.py                # Central config — loads .env FIRST, validates prod settings
+│   ├── main.py                  # FastAPI app — /health, /generate, /answer, /download, /history
+│   ├── ai_client.py             # Gemini client with model fallback chain + timeouts
+│   ├── auth.py                  # JWT + session tokens, bcrypt hashing, cookie/device helpers
+│   ├── database.py              # Motor async MongoDB connection + indexes
+│   ├── dependencies.py          # get_current_user / session-revocation dependency
+│   ├── limiter.py               # slowapi rate limiter (proxy-aware client IP)
 │   ├── generator.py             # .docx resume + cover letter builder (python-docx)
 │   ├── prompts.py               # All Gemini prompts (resume, cover letter, Q&A, normalization)
 │   ├── requirements.txt
@@ -207,13 +211,14 @@ JobCraft-AI-Application-Generator/
 │       │   ├── GenerateButton.jsx
 │       │   ├── QAPanel.jsx
 │       │   ├── HistoryDrawer.jsx
-│       │   ├── DownloadPanel.jsx
 │       │   └── Loader.jsx
 │       └── pages/
-│           ├── Login.jsx                 # Login + Signup tabs
-│           ├── ProfileSetup.jsx          # 4-step onboarding wizard
+│           ├── Login.jsx                 # Login + Signup + Forgot-password tabs
+│           ├── ResetPasswordPage.jsx     # Public reset-password landing page (?token)
+│           ├── ProfileSetup.jsx          # 4-step onboarding wizard (draft-persisted)
 │           ├── ProfileEdit.jsx           # Profile management screen
 │           ├── Home.jsx                  # Main workspace dashboard
+│           ├── Settings.jsx              # Security & devices (active session management)
 │           ├── VerifyEmailPage.jsx       # Public email verification landing page
 │           └── EmailVerificationGate.jsx # Hard wall gating unverified sessions
 │
@@ -226,33 +231,47 @@ JobCraft-AI-Application-Generator/
 
 ## API Reference
 
+Auth column: **No** = public, **Cookie** = requires a valid token cookie, **Yes** =
+authenticated + email-verified, **Auth-only** = authenticated but does *not* require
+a verified email. Rate limits are noted where they apply.
+
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `POST` | `/auth/signup` | No | Register new user account (automatically dispatches verification link) |
-| `POST` | `/auth/login` | No | Login — sets `httpOnly` auth cookies |
-| `POST` | `/auth/logout` | No | Clears auth cookies |
-| `POST` | `/auth/refresh` | Cookie | Silently rotate access + refresh tokens |
-| `GET` | `/auth/verify` | Yes (lighter) | Verify active session status (returns verification status) |
-| `POST` | `/auth/send-verification` | Yes (lighter) | Generate secure token and send HTML verification link via Resend |
+| `GET` | `/health` | No | Liveness + MongoDB readiness (200 ok / 503 degraded) |
+| `POST` | `/auth/signup` | No | Register new user (5/15min per IP; dispatches verification link) |
+| `POST` | `/auth/login` | No | Login — sets `httpOnly` cookies, opens a new device session (10/15min per IP) |
+| `POST` | `/auth/logout` | Cookie | Ends the current session and clears cookies |
+| `POST` | `/auth/refresh` | Cookie | Rotate access + refresh tokens (reuse of a rotated token revokes the session) |
+| `GET` | `/auth/verify` | Auth-only | Verify active session status (returns email-verified flag) |
+| `POST` | `/auth/send-verification` | Auth-only | Send an HTML verification link via Resend (3/hour per IP) |
 | `GET` | `/auth/verify-email` | No | Public verification endpoint for token validation |
-| `POST` | `/profile/normalize` | Yes | AI-normalize raw profile text via Gemini |
+| `POST` | `/auth/forgot-password` | No | Request a reset link (always generic response; 3/hour per IP) |
+| `POST` | `/auth/reset-password` | No | Set a new password from a reset token; revokes all sessions (5/hour per IP) |
+| `GET` | `/auth/sessions` | Auth-only | List the account's active devices/sessions |
+| `DELETE` | `/auth/sessions/{sid}` | Auth-only | Sign out a specific device |
+| `POST` | `/auth/sessions/revoke-others` | Auth-only | Sign out every device except the current one |
+| `POST` | `/profile/normalize` | Yes | AI-normalize raw profile text via Gemini (10/hour per user) |
 | `POST` | `/profile/save` | Yes | Save confirmed structured profile |
 | `GET` | `/profile/me` | Yes | Fetch current user's profile |
-| `PATCH` | `/profile/update` | Yes | Update profile (partial or full) |
-| `POST` | `/generate` | Yes | Generate tailored resume + cover letter |
-| `POST` | `/answer` | Yes | Answer a screening question |
-| `GET` | `/download/{filename}` | Yes | Download file (user-scoped — 403 if not yours) |
+| `PATCH` | `/profile/update` | Yes | Update profile (partial merge or full replace) |
+| `POST` | `/generate` | Yes | Generate tailored resume + cover letter (5/hour per user) |
+| `POST` | `/answer` | Yes | Answer a screening question (20/hour per user) |
+| `GET` | `/download/{filename}` | Yes | Download a generated file (user-scoped — 403 if not yours) |
 | `GET` | `/history` | Yes | Fetch user's generation history |
 
 ---
 
 ## Security Model
 
-- Passwords hashed with **bcrypt** — never stored in plain text
-- **JWT access tokens** expire in 30 minutes; **refresh tokens** expire in 7 days
-- Both tokens stored in **`httpOnly` cookies** — inaccessible to JavaScript
-- **Refresh token rotation** — every silent refresh issues a new pair and invalidates the previous one; replayed tokens trigger immediate session termination
-- File downloads are **user-scoped** — queried against the user's own history before serving; a 403 is returned if the file belongs to another user
+- Passwords hashed with **bcrypt** — never stored in plain text; login is constant-time and returns a single generic error, so it does not reveal which emails have accounts
+- **JWT access tokens** expire in 30 minutes; **refresh tokens** expire in 7 days; both are stored in **`httpOnly` cookies** (Secure + SameSite configurable) — inaccessible to JavaScript
+- **Multi-device sessions** — each login opens a named session (device, IP, last-active) that the user can view and revoke individually from *Security & Devices*; access tokens carry a session id, so revoking a device kills its access token immediately rather than after expiry
+- **Refresh token rotation with reuse detection** — every refresh issues a new pair; a replayed (already-rotated) refresh token is treated as theft and revokes that whole session
+- **Password reset** revokes every session, forcing re-login everywhere
+- **Rate limiting** (slowapi) on auth and all billable AI endpoints — see the API table
+- **Prompt-injection defense** — user-supplied job descriptions are delimited and marked as untrusted data in every prompt, and generated output is validated before a document is saved
+- File downloads are **user-scoped** and written under a per-user directory — queried against the user's own history before serving; a 403 is returned if the file belongs to another user
+- **Config safety** — the app refuses to start in production if `JWT_SECRET` is unset/placeholder, and only exact `APP_ENV=production` locks down credentialed CORS origins
 
 ---
 
@@ -262,13 +281,20 @@ JobCraft-AI-Application-Generator/
 |---|---|---|
 | `MONGO_URI` | ✅ | MongoDB connection string |
 | `DB_NAME` | ✅ | MongoDB database name |
-| `JWT_SECRET` | ✅ | Secret key for signing JWT tokens |
-| `JWT_ALGORITHM` | ✅ | `HS256` recommended |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | ✅ | Access token lifetime |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | ✅ | Refresh token lifetime |
+| `JWT_SECRET` | ✅ | Secret for signing JWTs. **Must be set in production** or the app refuses to start |
+| `JWT_ALGORITHM` | ❌ | `HS256` (default) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | ❌ | Access token lifetime (default 30) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | ❌ | Refresh token lifetime (default 7) |
+| `PASSWORD_RESET_TOKEN_EXPIRE_MINUTES` | ❌ | Reset-link lifetime (default 60) |
+| `APP_ENV` | ✅ (prod) | Set to exactly `production` on deployed instances; anything else allows localhost CORS origins for dev |
+| `COOKIE_SECURE` | ❌ | `true` (default). Keep true in any real deployment |
+| `COOKIE_SAMESITE` | ❌ | `lax` (default). Use `none` only for a cross-site frontend (requires `COOKIE_SECURE=true`) |
 | `GEMINI_API_KEY` | ✅ | Google Gemini API key |
-| `RESEND_API_KEY` | ❌ | API key for Resend email service (console fallback if empty) |
-| `FRONTEND_URL` | ❌ | Base URL of React app for links in verification emails |
+| `GEMINI_TIMEOUT_SECONDS` | ❌ | Per-call Gemini timeout (default 60) |
+| `GEMINI_MODEL_CHAIN` | ❌ | Comma-separated model fallback override |
+| `RESEND_API_KEY` | ❌ | Resend email API key (links printed to server log if empty) |
+| `RESEND_FROM` | ❌ | Verified sender address (default `onboarding@resend.dev`) |
+| `FRONTEND_URL` | ✅ (prod) | Base URL of the React app; also the production CORS allowlist (comma-separated for several) |
 
 ---
 
