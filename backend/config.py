@@ -33,7 +33,9 @@ def _get_bool(name: str, default: bool) -> bool:
 
 
 # ── Environment ────────────────────────────────────────────────────────────
-APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+# APP_ENV is canonical, but the deployed Render service historically set `ENV`
+# (=production), so accept it as a fallback to avoid a silent dev-mode CORS gap.
+APP_ENV = (os.getenv("APP_ENV") or os.getenv("ENV") or "development").strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
 
 # ── JWT / Auth ─────────────────────────────────────────────────────────────
