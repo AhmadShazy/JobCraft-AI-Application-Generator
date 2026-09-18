@@ -1,13 +1,18 @@
 import json
-from fastapi import APIRouter, HTTPException, Depends, status
+import asyncio
+
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from pydantic import BaseModel
-from backend.ai_client import GeminiClient, clean_json_response
+
+from backend.ai_client import get_gemini_client, clean_json_response
 from backend.prompts import (
     PROFILE_NORMALIZATION_SYSTEM_PROMPT,
     PROFILE_NORMALIZATION_USER_PROMPT_TEMPLATE
 )
 from backend.dependencies import get_current_user
 from backend.database import get_database
+from backend.limiter import limiter, get_user_id_key
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
@@ -28,6 +33,17 @@ class UpdateProfileRequest(BaseModel):
     profile: dict | None = None
     basic_info: dict | None = None
     education: list[dict] | None = None
+
+
+def compute_profile_complete(profile: dict) -> bool:
+    """Single source of truth for profile completeness (name+email+phone+location+education)."""
+    return bool(
+        profile.get("name")
+        and profile.get("email")
+        and profile.get("phone")
+        and profile.get("location")
+        and profile.get("education", [])
+    )
 
 @router.patch("/update")
 async def update_profile(payload: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
@@ -50,14 +66,8 @@ async def update_profile(payload: UpdateProfileRequest, current_user: dict = Dep
             updated_profile["education"] = payload.education
             
     # Re-evaluate profile completeness
-    name = updated_profile.get("name")
-    email = updated_profile.get("email")
-    phone = updated_profile.get("phone")
-    location = updated_profile.get("location")
-    education = updated_profile.get("education", [])
-    is_complete = bool(name and email and phone and location and education)
-    
-    from bson import ObjectId
+    is_complete = compute_profile_complete(updated_profile)
+
     await db.users.update_one(
         {"_id": ObjectId(current_user["_id"])},
         {
@@ -75,7 +85,8 @@ async def update_profile(payload: UpdateProfileRequest, current_user: dict = Dep
     }
 
 @router.post("/normalize")
-async def normalize_profile(payload: NormalizeRequest, current_user: dict = Depends(get_current_user)):
+@limiter.limit("10/hour", key_func=get_user_id_key)
+async def normalize_profile(request: Request, payload: NormalizeRequest, current_user: dict = Depends(get_current_user)):
     """
     Receives the entire profile data from the frontend wizard,
     calls Gemini to parse and normalize the free-text and form data,
@@ -93,13 +104,15 @@ async def normalize_profile(payload: NormalizeRequest, current_user: dict = Depe
             "volunteer": payload.volunteer,
             "additional_info": payload.additional_info
         }
-        
+
         user_prompt = PROFILE_NORMALIZATION_USER_PROMPT_TEMPLATE.format(
             raw_profile_data=json.dumps(input_data, indent=2)
         )
-        
-        client = GeminiClient()
-        raw_response = client.generate(PROFILE_NORMALIZATION_SYSTEM_PROMPT, user_prompt, task="normalize")
+
+        client = get_gemini_client()
+        raw_response = await asyncio.to_thread(
+            client.generate, PROFILE_NORMALIZATION_SYSTEM_PROMPT, user_prompt, "normalize"
+        )
         cleaned_json_str = clean_json_response(raw_response)
         
         # Parse output to verify it is valid JSON
@@ -127,18 +140,10 @@ async def save_profile(payload: SaveProfileRequest, current_user: dict = Depends
     """
     db = get_database()
     profile_data = payload.profile
-    
-    # Check if basic required fields are present to mark profile as complete
+
     # Required: Name, Email, Phone, Location, and at least one education entry
-    name = profile_data.get("name")
-    email = profile_data.get("email")
-    phone = profile_data.get("phone")
-    location = profile_data.get("location")
-    education = profile_data.get("education", [])
-    
-    is_complete = bool(name and email and phone and location and education)
-    
-    from bson import ObjectId
+    is_complete = compute_profile_complete(profile_data)
+
     await db.users.update_one(
         {"_id": ObjectId(current_user["_id"])},
         {

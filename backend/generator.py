@@ -76,14 +76,22 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
         section_content = parts[i+1].strip()
         sections[section_name] = section_content
 
-    # Print statement showing successfully parsed sections
+    # Guard against unusable model output: if there are no === SECTION === markers
+    # the resume body would be empty. Fail loudly instead of saving a blank doc
+    # (a refusal, a preamble, or fenced output all produce zero sections).
+    if not sections:
+        raise ValueError(
+            "The model returned no recognizable resume sections "
+            "(no '=== SECTION ===' markers were found in the output)."
+        )
+
     print(f"Successfully parsed sections: {list(sections.keys())}")
 
     # 1. Header (Name, Dynamic Tagline, and Contact Info)
     name_p = doc.add_paragraph()
     name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     name_p.paragraph_format.space_after = Pt(2)
-    name_run = name_p.add_run(profile_data.get("name", "Ahmad Sheraz"))
+    name_run = name_p.add_run(profile_data.get("name") or "Candidate")
     apply_font_settings(name_run, size_pt=16, bold=True)
 
     # Center-aligned Dynamic Tagline under candidate name
@@ -170,7 +178,7 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
                     list_run = skill_p.add_run(items_str)
                     apply_font_settings(list_run, size_pt=10)
 
-        elif "EXPERIENCE" in section_name:
+        elif "EXPERIENCE" in section_name and "VOLUNTEER" not in section_name:
             exp_title_p = doc.add_paragraph()
             exp_title_p.paragraph_format.space_before = Pt(10)
             exp_title_p.paragraph_format.space_after = Pt(4)
@@ -294,6 +302,12 @@ def generate_resume_docx(resume_text: str, profile_data: dict, output_path: str)
                         inst_text += f" ({note})"
                     inst_run = inst_p.add_run(inst_text)
                     apply_font_settings(inst_run, size_pt=10, italic=True)
+                else:
+                    # Non-pipe line, e.g. the prompt's "Relevant Coursework: ..."
+                    # sub-line. Previously these were dropped silently.
+                    sub_p = doc.add_paragraph()
+                    sub_p.paragraph_format.space_after = Pt(2)
+                    add_markdown_runs(sub_p, line, size_pt=9.5, default_italic=True)
 
         elif "CERTIFICATION" in section_name:
             cert_title_p = doc.add_paragraph()
@@ -397,6 +411,16 @@ def generate_cover_letter_docx(cl_data: dict, name: str, email: str, phone: str,
     Uses Arial, black-only color scheme, standard 1-inch margins.
     Formatted as block paragraphs (no indent, with spaces between paragraphs).
     """
+    # Validate the model's JSON shape before rendering. json.loads guarantees
+    # valid JSON, not the expected schema: a string 'paragraphs' would render one
+    # paragraph per character, a missing key an empty letter. Fail cleanly instead.
+    if not isinstance(cl_data, dict):
+        raise ValueError("Cover letter data must be a JSON object.")
+    paragraphs = cl_data.get("paragraphs")
+    if (not isinstance(paragraphs, list) or not paragraphs
+            or not all(isinstance(p, str) and p.strip() for p in paragraphs)):
+        raise ValueError("Cover letter JSON is missing a valid, non-empty 'paragraphs' list of strings.")
+
     doc = Document()
     set_margins(doc, 1.0)
 
@@ -442,7 +466,7 @@ def generate_cover_letter_docx(cl_data: dict, name: str, email: str, phone: str,
     apply_font_settings(sal_run, size_pt=10)
 
     # 6. Body Paragraphs
-    for para_text in cl_data.get("paragraphs", []):
+    for para_text in paragraphs:
         p = doc.add_paragraph()
         p.paragraph_format.space_after = Pt(12)
         p.paragraph_format.line_spacing = 1.15

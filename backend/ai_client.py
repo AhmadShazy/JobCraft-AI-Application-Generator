@@ -1,29 +1,23 @@
-import os
 import re
 import json
-from dotenv import load_dotenv
+
 from google import genai
 from google.genai import types
 
-load_dotenv()
+from backend import config
 
 # ─────────────────────────────────────────────────────────────
 # Fallback chain — tried in order, highest quality first.
-# Only quota/rate-limit errors advance the chain;
-# hard errors (bad key, malformed prompt, etc.) stop immediately.
+# Sourced from config (env-overridable).
 # ─────────────────────────────────────────────────────────────
-GEMINI_MODEL_CHAIN = [
-    "gemini-3.1-flash-lite",    # highest quality — try first
-    "gemini-3.5-flash",         # step 2
-    "gemini-3.0-flash",         # step 3
-    "gemini-2.5-flash",         # step 4
-    "gemini-2.5-flash-lite",    # last resort
-]
+GEMINI_MODEL_CHAIN = config.GEMINI_MODEL_CHAIN
 
 # ─────────────────────────────────────────────────────────────
 # Task-specific generation configs
 # Higher temperature → more natural, varied language (writing tasks)
 # Lower temperature  → deterministic, precise output (structured/JSON tasks)
+# JSON tasks additionally request application/json so the model returns parseable
+# output rather than prose or fenced text.
 # ─────────────────────────────────────────────────────────────
 TASK_CONFIGS = {
     "resume": {
@@ -33,6 +27,7 @@ TASK_CONFIGS = {
     "cover_letter": {
         "max_output_tokens": 8192,
         "temperature": 0.7,           # Warm, flowing prose
+        "response_mime_type": "application/json",
     },
     "qa": {
         "max_output_tokens": 4096,
@@ -41,6 +36,7 @@ TASK_CONFIGS = {
     "normalize": {
         "max_output_tokens": 8192,
         "temperature": 0.1,           # Highly deterministic — precise JSON extraction
+        "response_mime_type": "application/json",
     },
     "detect": {
         "max_output_tokens": 256,
@@ -49,18 +45,34 @@ TASK_CONFIGS = {
 }
 
 # ─────────────────────────────────────────────────────────────
-# Patterns that indicate a transient / quota / availability error → try next model.
+# Error classification. Each category advances the fallback chain, but the FINAL
+# error message reflects what actually went wrong, so an invalid model id no
+# longer masquerades as a quota problem.
 # ─────────────────────────────────────────────────────────────
-_RETRYABLE_PATTERNS = re.compile(
-    r"quota[_ ]exceeded|rate[_ ]limit|resource[_ ]exhausted|"
-    r"429|503|404|overloaded|try again|"
-    r"not[_ ]found|not[_ ]supported|unavailable|temporarily",
+_QUOTA_PATTERNS = re.compile(
+    r"quota[_ ]exceeded|rate[_ ]limit|resource[_ ]exhausted|\b429\b|too many requests",
+    re.IGNORECASE,
+)
+_UNAVAILABLE_PATTERNS = re.compile(
+    r"\b503\b|overloaded|unavailable|try again|temporarily|deadline|timeout|timed out",
+    re.IGNORECASE,
+)
+_NOT_FOUND_PATTERNS = re.compile(
+    r"\b404\b|not[_ ]found|not[_ ]supported|is not supported|unknown model|no such model",
     re.IGNORECASE,
 )
 
-def _is_retryable(exc: Exception) -> bool:
-    """Return True if the exception is a quota/rate-limit/availability issue."""
-    return bool(_RETRYABLE_PATTERNS.search(str(exc)))
+
+def _classify(exc: Exception) -> str:
+    """Return one of: 'quota', 'unavailable', 'not_found', or 'hard'."""
+    msg = str(exc)
+    if _QUOTA_PATTERNS.search(msg):
+        return "quota"
+    if _NOT_FOUND_PATTERNS.search(msg):
+        return "not_found"
+    if _UNAVAILABLE_PATTERNS.search(msg):
+        return "unavailable"
+    return "hard"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -81,85 +93,135 @@ class AIClient:
 # ─────────────────────────────────────────────────────────────
 class GeminiClient(AIClient):
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = config.GEMINI_API_KEY
         if not api_key or "Dummy" in api_key:
             raise ValueError(
                 "GEMINI_API_KEY is not set or is still the dummy value. "
                 "Please configure a valid API key in backend/.env"
             )
-        self._client = genai.Client(api_key=api_key)
+        # A per-call timeout so a hung request cannot stall a worker forever
+        # (HttpOptions.timeout is milliseconds).
+        self._client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=config.GEMINI_TIMEOUT_SECONDS * 1000),
+        )
+
+    def _build_config(self, task_cfg: dict, system_prompt: str) -> types.GenerateContentConfig:
+        kwargs = dict(
+            system_instruction=system_prompt,
+            max_output_tokens=task_cfg["max_output_tokens"],
+            temperature=task_cfg["temperature"],
+        )
+        if task_cfg.get("response_mime_type"):
+            kwargs["response_mime_type"] = task_cfg["response_mime_type"]
+        return types.GenerateContentConfig(**kwargs)
+
+    def _extract_text(self, response) -> str:
+        """Return response text, raising if the model stopped early or returned nothing."""
+        candidates = getattr(response, "candidates", None) or []
+        if candidates:
+            fr = getattr(candidates[0], "finish_reason", None)
+            fr_name = getattr(fr, "name", None) if fr is not None else None
+            # STOP is the only clean completion. MAX_TOKENS means a truncated
+            # document; SAFETY/RECITATION/etc. mean blocked. Never save those as
+            # a successful generation.
+            if fr_name and fr_name not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
+                raise ValueError(f"Model did not finish cleanly (finish_reason={fr_name}).")
+        text = getattr(response, "text", None)
+        if not text or not text.strip():
+            raise ValueError("Received empty response from Gemini API.")
+        return text
 
     def generate(self, system_prompt: str, user_prompt: str, task: str = "resume") -> str:
         """
         Attempts generation using each model in GEMINI_MODEL_CHAIN in order.
-        Uses task-specific temperature and token limits from TASK_CONFIGS.
 
-        - Quota / rate-limit errors  → silently advance to next model.
-        - Hard errors (bad key, etc) → stop immediately and re-raise.
-        - All models exhausted       → raise a clear user-friendly error.
+        - Quota / availability / not-found errors → advance to the next model.
+        - Transient (unavailable) errors          → retry the SAME model once first.
+        - Hard errors (bad key, truncation, etc.) → stop immediately and re-raise.
+        - All models exhausted                    → raise a message matching the
+                                                    dominant failure category.
         """
-        config = TASK_CONFIGS.get(task, TASK_CONFIGS["resume"])
+        task_cfg = TASK_CONFIGS.get(task, TASK_CONFIGS["resume"])
+        gen_config = self._build_config(task_cfg, system_prompt)
         skipped: list[tuple[str, str]] = []
+        categories: list[str] = []
 
         for model_name in GEMINI_MODEL_CHAIN:
-            try:
-                print(f"[gemini] Attempting model: {model_name} (task={task}, temp={config['temperature']})")
+            attempts = 0
+            while True:
+                attempts += 1
+                try:
+                    print(f"[gemini] Attempting model: {model_name} (task={task}, temp={task_cfg['temperature']})")
+                    response = self._client.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=gen_config,
+                    )
+                    text = self._extract_text(response)
 
-                response = self._client.models.generate_content(
-                    model=model_name,
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        max_output_tokens=config["max_output_tokens"],
-                        temperature=config["temperature"],
-                    ),
-                )
+                    if skipped:
+                        print(f"[gemini] SUCCESS with {model_name} (skipped: {', '.join(m for m, _ in skipped)})")
+                    else:
+                        print(f"[gemini] SUCCESS with {model_name}")
+                    return text
 
-                if not response.text:
-                    raise ValueError("Received empty response from Gemini API.")
+                except Exception as exc:
+                    category = _classify(exc)
+                    short = str(exc)[:160].replace("\n", " ")
 
-                # ── Success ──────────────────────────────────────────────
-                if skipped:
-                    skipped_names = ", ".join(m for m, _ in skipped)
-                    print(f"[gemini] SUCCESS with {model_name} (skipped: {skipped_names})")
-                else:
-                    print(f"[gemini] SUCCESS with {model_name}")
+                    # Retry the same model once for a transient blip before falling back.
+                    if category == "unavailable" and attempts < 2:
+                        print(f"[gemini] {model_name} transient ({short}); retrying same model.")
+                        continue
 
-                return response.text
+                    if category in ("quota", "unavailable", "not_found"):
+                        print(f"[gemini] {model_name} {category} — falling back. ({short})")
+                        skipped.append((model_name, short))
+                        categories.append(category)
+                        break  # advance to next model
 
-            except Exception as exc:
-                if _is_retryable(exc):
-                    short = str(exc)[:120].replace("\n", " ")
-                    print(f"[gemini] {model_name} quota/rate-limit — falling back. ({short})")
-                    skipped.append((model_name, short))
-                    continue
+                    # Hard error — surface immediately.
+                    print(f"[gemini] {model_name} hard error (not retrying): {exc}")
+                    raise
 
-                # Hard error — surface it immediately
-                print(f"[gemini] {model_name} hard error (not retrying): {exc}")
-                raise
-
-        # ── All models exhausted ──────────────────────────────────────
-        skipped_names = ", ".join(m for m, _ in skipped)
-        print(f"[gemini] All models exhausted. Tried: {skipped_names}")
+        # ── All models exhausted ─────────────────────────────────────────────
+        tried = ", ".join(m for m, _ in skipped)
+        print(f"[gemini] All models exhausted. Tried: {tried}")
+        if categories and all(c == "not_found" for c in categories):
+            raise RuntimeError(
+                "No configured Gemini model is currently available (all model ids returned "
+                "not-found). Check GEMINI_MODEL_CHAIN against the models your API key can access."
+            )
+        if "quota" in categories:
+            raise RuntimeError(
+                "All Gemini models have reached their rate/quota limit. Please wait a moment and try again."
+            )
         raise RuntimeError(
-            "All Gemini models have reached their rate/quota limit. "
-            "Please wait a moment and try again."
+            "The AI service is temporarily unavailable. Please try again in a few moments."
         )
 
 
 # ─────────────────────────────────────────────────────────────
-# Claude placeholder (Phase 5)
+# Lazy singleton — reuse one client (and its connection pool) across requests
+# rather than constructing a new one per call.
+# ─────────────────────────────────────────────────────────────
+_gemini_singleton: GeminiClient | None = None
+
+
+def get_gemini_client() -> GeminiClient:
+    global _gemini_singleton
+    if _gemini_singleton is None:
+        _gemini_singleton = GeminiClient()
+    return _gemini_singleton
+
+
+# ─────────────────────────────────────────────────────────────
+# Claude placeholder — reserved provider slot for a future second provider.
 # ─────────────────────────────────────────────────────────────
 class ClaudeClient(AIClient):
-    def __init__(self):
-        api_key = os.getenv("CLAUDE_API_KEY")
-        if not api_key:
-            raise ValueError("CLAUDE_API_KEY is not set in backend/.env")
-
     def generate(self, system_prompt: str, user_prompt: str, task: str = "resume") -> str:
-        raise NotImplementedError(
-            "ClaudeClient is not implemented yet. It will be implemented in Phase 5."
-        )
+        raise NotImplementedError("ClaudeClient is a reserved provider slot and is not implemented yet.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -167,16 +229,14 @@ class ClaudeClient(AIClient):
 # ─────────────────────────────────────────────────────────────
 def clean_json_response(raw_text: str) -> str:
     """
-    Robustly extracts the raw JSON from a Gemini response.
+    Robustly extracts raw JSON from a model response.
 
-    Handles:
-    - Markdown code fences (```json ... ``` or ``` ... ```)
-    - Stray text before/after the JSON object
-    - Trailing commas before closing braces/brackets (common Gemini quirk)
+    Handles markdown code fences, stray surrounding text, and trailing commas.
+    Returns a best-effort string; the CALLER is responsible for json.loads and
+    schema validation (this function does not itself guarantee valid JSON).
     """
     text = raw_text.strip()
 
-    # 1. Strip markdown code fences
     if text.startswith("```json"):
         text = text[len("```json"):]
     elif text.startswith("```"):
@@ -185,7 +245,6 @@ def clean_json_response(raw_text: str) -> str:
         text = text[:-3]
     text = text.strip()
 
-    # 2. Extract the JSON object/array if there's surrounding text
     first_brace = -1
     last_brace = -1
     for i, ch in enumerate(text):
@@ -199,13 +258,6 @@ def clean_json_response(raw_text: str) -> str:
     if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
         text = text[first_brace:last_brace + 1]
 
-    # 3. Fix trailing commas before } or ] (e.g. {"a": 1,} → {"a": 1})
+    # Fix trailing commas before } or ] (e.g. {"a": 1,} → {"a": 1})
     text = re.sub(r',\s*([}\]])', r'\1', text)
-
-    # 4. Validate — if not parseable, return as-is so the caller gets the raw error
-    try:
-        json.loads(text)
-    except json.JSONDecodeError:
-        pass
-
     return text.strip()

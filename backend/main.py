@@ -13,6 +13,11 @@ from pydantic import BaseModel
 
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
+
+# backend.config is imported first: its module body runs load_dotenv() before any
+# other backend module reads a setting, which is what keeps the real JWT secret
+# from being shadowed by the placeholder default.
+from backend import config
 from backend.limiter import limiter, get_user_id_key
 
 # Import modules from backend package
@@ -20,11 +25,12 @@ from backend.prompts import (
     RESUME_SYSTEM_PROMPT,
     COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_PROMPT_TEMPLATE,
     QA_SYSTEM_PROMPT, QA_USER_PROMPT_TEMPLATE,
+    COMPANY_DETECT_SYSTEM_PROMPT, COMPANY_DETECT_USER_PROMPT_TEMPLATE,
     build_resume_prompt
 )
-from backend.ai_client import GeminiClient, clean_json_response
+from backend.ai_client import get_gemini_client, clean_json_response
 from backend.generator import generate_resume_docx, generate_cover_letter_docx
-from backend.database import connect_to_mongo, close_mongo_connection, get_database
+from backend.database import connect_to_mongo, close_mongo_connection, get_database, is_connected
 from backend.routers.auth_router import router as auth_router
 from backend.routers.profile_router import router as profile_router
 from backend.dependencies import get_current_user, get_authenticated_user
@@ -47,17 +53,18 @@ async def cleanup_outputs_task():
             cutoff = now - (24 * 3600)  # 24 hours ago
             
             if os.path.exists(OUTPUTS_DIR):
-                for filename in os.listdir(OUTPUTS_DIR):
-                    if filename.endswith(".docx"):
-                        file_path = os.path.join(OUTPUTS_DIR, filename)
+                # Recurse: generated docs now live under per-user subdirectories.
+                for root, _dirs, files in os.walk(OUTPUTS_DIR):
+                    for filename in files:
+                        if not filename.endswith(".docx"):
+                            continue
+                        file_path = os.path.join(root, filename)
                         try:
-                            # Get modification time
-                            mtime = os.path.getmtime(file_path)
-                            if mtime < cutoff:
+                            if os.path.getmtime(file_path) < cutoff:
                                 os.remove(file_path)
-                                print(f"[cleanup task] Deleted old file: {filename}")
+                                print(f"[cleanup task] Deleted old file: {file_path}")
                         except Exception as file_err:
-                            print(f"[cleanup task] Error accessing/deleting {filename}: {file_err}")
+                            print(f"[cleanup task] Error accessing/deleting {file_path}: {file_err}")
         except Exception as e:
             print(f"[cleanup task ERROR] Error in cleanup task loop: {e}")
         
@@ -71,7 +78,12 @@ async def cleanup_outputs_task():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── STARTUP ──
-    # Connect to MongoDB
+    # Refuse to start on dangerous production misconfiguration (e.g. a placeholder
+    # JWT secret in production) rather than fail open.
+    config.validate()
+
+    # Connect to MongoDB. On failure the client is NOT published (get_database
+    # raises a clear error), and /health will report the database as down.
     try:
         await connect_to_mongo()
     except Exception as e:
@@ -107,27 +119,14 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Too many requests. Please wait before trying again."}
     )
 
-# Keep the configured deployment origin while supporting both loopback hostnames
-# during local development. Browsers treat localhost and 127.0.0.1 as different
-# origins, which matters for the credentialed requests this API relies on.
-#
-# The loopback origins are added ONLY outside production. allow_credentials=True
-# below means that any page served from a user's own localhost:5173 would
-# otherwise be able to make credentialed cross-origin calls to the deployed API
-# and read the responses. Deployments must set APP_ENV=production.
-APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-configured_origins = [origin.strip() for origin in frontend_url.split(",") if origin.strip()]
-local_dev_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-
-if APP_ENV == "production":
-    allow_origins = list(dict.fromkeys(configured_origins))
-else:
-    allow_origins = list(dict.fromkeys([*configured_origins, *local_dev_origins]))
-
+# CORS origins are resolved in backend.config: exactly FRONTEND_URL in production,
+# plus the loopback origins outside production. allow_credentials=True means only
+# these exact origins may read authenticated responses. (In the deployed topology
+# the frontend reaches the API same-origin via the Vercel /api proxy, so this
+# allowlist matters mainly for any direct cross-origin access to the API host.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
+    allow_origins=config.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -135,6 +134,17 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(profile_router)
+
+
+@app.get("/health")
+async def health():
+    """Liveness + database readiness. Lets a deployment tell 'app up' from 'app up but DB down'."""
+    db_ok = is_connected()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"status": "ok" if db_ok else "degraded", "database": "connected" if db_ok else "unavailable"},
+    )
+
 
 @app.get("/auth/verify")
 def verify_session(current_user: dict = Depends(get_authenticated_user)):
@@ -163,15 +173,10 @@ class AnswerRequest(BaseModel):
 # ─────────────────────────────────────────────
 def detect_company_name(jd: str) -> str:
     """Extracts the hiring company name from the JD via Gemini. Falls back to 'unknown'."""
-    client = GeminiClient()
-    sys_prompt = (
-        "You are a precise data extractor. Extract the hiring company name from the provided "
-        "Job Description. Return ONLY the raw company name. Do not include any explanation, "
-        "quotes, introductory text, or punctuation. "
-        "If the company name is not mentioned, unclear, or cannot be determined, return 'unknown'."
-    )
+    client = get_gemini_client()
+    user_prompt = COMPANY_DETECT_USER_PROMPT_TEMPLATE.format(jd=jd)
     try:
-        response = client.generate(sys_prompt, jd, task="detect")
+        response = client.generate(COMPANY_DETECT_SYSTEM_PROMPT, user_prompt, task="detect")
         name = re.sub(r'["\'\`\.]', '', response.strip()).strip()
         return name if name and name.lower() != "unknown" else "unknown"
     except Exception as e:
@@ -205,22 +210,29 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
     profile_str = json.dumps(profile_data, indent=2)
 
     try:
-        client = GeminiClient()
+        client = get_gemini_client()
 
-        # 1. Resume — uses pre-built prompt from profile_data (dict)
+        # A single generation timestamp drives the cover-letter date, the history
+        # date, and the filename stamp so they can never disagree across midnight.
+        generation_dt = datetime.now(timezone.utc)
+        current_date_str = f"{generation_dt.strftime('%B')} {generation_dt.day}, {generation_dt.year}"
+        date_str = generation_dt.strftime("%Y-%m-%d")
+        file_stamp = generation_dt.strftime("%Y-%m-%d_%H%M%S")
+
+        # 1. Resume — uses pre-built prompt from profile_data (dict).
+        # Gemini calls and docx writes are blocking; run them off the event loop
+        # so one /generate does not stall every other request on the worker.
         resume_user = build_resume_prompt(profile_data, payload.jd)
         print("Generating resume content via Gemini...")
-        raw_resume = client.generate(RESUME_SYSTEM_PROMPT, resume_user, task="resume")
+        raw_resume = await asyncio.to_thread(client.generate, RESUME_SYSTEM_PROMPT, resume_user, "resume")
 
         # 2. Company name resolution
         company_name = payload.company_name.strip() if payload.company_name else None
         if not company_name:
-            company_name = detect_company_name(payload.jd)
+            company_name = await asyncio.to_thread(detect_company_name, payload.jd)
         print(f"Resolved company name: {company_name}")
 
         # 3. Cover letter — uses pre-formatted profile_str (JSON string)
-        now = datetime.now()
-        current_date_str = f"{now.strftime('%B')} {now.day}, {now.year}"
         cl_user = COVER_LETTER_USER_PROMPT_TEMPLATE.format(
             profile_json=profile_str,
             company_name=company_name,
@@ -228,45 +240,48 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
             jd=payload.jd
         )
         print("Generating cover letter content via Gemini...")
-        raw_cl = client.generate(COVER_LETTER_SYSTEM_PROMPT, cl_user, task="cover_letter")
+        raw_cl = await asyncio.to_thread(client.generate, COVER_LETTER_SYSTEM_PROMPT, cl_user, "cover_letter")
 
         cleaned_cl_str = clean_json_response(raw_cl)
         try:
             cl_json = json.loads(cleaned_cl_str)
-            # Always guarantee the cover letter document displays the current generation date
-            cl_json["date"] = current_date_str
-            candidate_name = profile_data.get("name", "")
-            if "sign_off" in cl_json:
-                cl_json["sign_off"] = cl_json["sign_off"].replace("{candidate_name}", candidate_name)
-        except Exception as e:
+        except Exception:
             print(f"Failed to parse cover letter JSON. Raw output:\n{raw_cl}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to parse AI-generated cover letter JSON: {e}"
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="The AI returned an unreadable cover letter. Please try generating again.",
             )
+        if not isinstance(cl_json, dict):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="The AI returned an unexpected cover letter format. Please try generating again.",
+            )
+        # Always guarantee the cover letter document displays the generation date.
+        cl_json["date"] = current_date_str
+        candidate_name = profile_data.get("name") or "Candidate"
+        if isinstance(cl_json.get("sign_off"), str):
+            cl_json["sign_off"] = cl_json["sign_off"].replace("{candidate_name}", candidate_name)
 
-        # 4. File names
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        
+        # 4. File names — written into a per-user subdirectory so two accounts can
+        # never collide on an identical name/company/date and overwrite or serve
+        # each other's documents.
+        user_id = str(current_user["_id"])
         name_val = profile_data.get("name")
-        safe_name = ""
-        if name_val:
-            safe_name = sanitize_for_filename(name_val)
+        safe_name = sanitize_for_filename(name_val) if name_val else ""
         if not safe_name:
-            safe_name = str(current_user["_id"])
-            
-        safe_company = sanitize_for_filename(company_name)
-        if not safe_company:
-            safe_company = "unknown"
-            
-        resume_filename = f"{safe_name}_{safe_company}_{date_str}.docx"
-        cl_filename     = f"CoverLetter_{safe_name}_{safe_company}_{date_str}.docx"
-        resume_filepath = os.path.join(OUTPUTS_DIR, resume_filename)
-        cl_filepath     = os.path.join(OUTPUTS_DIR, cl_filename)
+            safe_name = user_id
 
-        # 5. Write files
+        safe_company = sanitize_for_filename(company_name) or "unknown"
+
+        resume_filename = f"{safe_name}_{safe_company}_{file_stamp}.docx"
+        cl_filename     = f"CoverLetter_{safe_name}_{safe_company}_{file_stamp}.docx"
+        user_dir        = os.path.join(OUTPUTS_DIR, user_id)
+        resume_filepath = os.path.join(user_dir, resume_filename)
+        cl_filepath     = os.path.join(user_dir, cl_filename)
+
+        # 5. Write files (off the event loop)
         print("Writing resume docx...")
-        generate_resume_docx(raw_resume, profile_data, resume_filepath)
+        await asyncio.to_thread(generate_resume_docx, raw_resume, profile_data, resume_filepath)
 
         print("Writing cover letter docx...")
         links = [
@@ -276,13 +291,14 @@ async def generate_documents(request: Request, payload: GenerateRequest, current
                 profile_data.get("portfolio", "")
             ] if l
         ]
-        generate_cover_letter_docx(
+        await asyncio.to_thread(
+            generate_cover_letter_docx,
             cl_json,
-            name=profile_data.get("name", "Ahmad Sheraz"),
-            email=profile_data.get("email", ""),
-            phone=profile_data.get("phone", ""),
-            links=links,
-            output_path=cl_filepath
+            candidate_name,
+            profile_data.get("email", ""),
+            profile_data.get("phone", ""),
+            links,
+            cl_filepath,
         )
 
         # 6. History
@@ -322,7 +338,7 @@ async def answer_question(request: Request, payload: AnswerRequest, current_user
     profile_str = json.dumps(profile_data, indent=2)
 
     try:
-        client = GeminiClient()
+        client = get_gemini_client()
 
         qa_user = QA_USER_PROMPT_TEMPLATE.format(
             profile_json=profile_str,
@@ -331,7 +347,7 @@ async def answer_question(request: Request, payload: AnswerRequest, current_user
         )
 
         print("Answering question via Gemini...")
-        answer = client.generate(QA_SYSTEM_PROMPT, qa_user, task="qa")
+        answer = await asyncio.to_thread(client.generate, QA_SYSTEM_PROMPT, qa_user, "qa")
         return {"answer": answer.strip()}
 
     except HTTPException:
@@ -344,7 +360,11 @@ async def answer_question(request: Request, payload: AnswerRequest, current_user
 @app.get("/download/{filename}")
 async def download_file(filename: str, current_user: dict = Depends(get_current_user)):
     db = get_database()
-    
+
+    # Reject anything that could escape the user's output directory.
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename.")
+
     # Query history to see if this user has generated this file
     log = await db.history.find_one({
         "user_id": ObjectId(current_user["_id"]),
@@ -353,17 +373,21 @@ async def download_file(filename: str, current_user: dict = Depends(get_current_
             {"coverletter_filename": filename}
         ]
     })
-    
+
     if not log:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to download this file."
         )
 
-    filepath = os.path.join(OUTPUTS_DIR, filename)
+    # Files live under a per-user subdirectory (see /generate).
+    filepath = os.path.join(OUTPUTS_DIR, str(current_user["_id"]), filename)
     if not os.path.exists(filepath):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found.")
-        
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This file has expired. Generated documents are available for 24 hours — please generate again.",
+        )
+
     return FileResponse(
         path=filepath,
         filename=filename,
