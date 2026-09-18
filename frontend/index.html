@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Tailored, ATS-optimized resumes, cover letters, and Q&A answers generator powered by AI." />
     <title>JobCraft AI | Tailored Resumes & AI Application Builder</title>
+    <!-- Inter is the font-sans family declared in tailwind.config.js. Loading it
+         here makes that config real instead of falling through to system-ui. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
     <!--
       Applies the stored theme BEFORE first paint. React sets the same class from a
       useEffect, which only runs after the first render — without this blocking
@@ -16,8 +21,12 @@
       (function () {
         try {
           var stored = localStorage.getItem('theme');
-          var dark = stored
-            ? stored === 'dark'
+          // Only an explicit 'dark'/'light' choice wins; any other/absent value
+          // follows the OS. Must match resolveTheme() in src/App.jsx exactly.
+          var dark = stored === 'dark'
+            ? true
+            : stored === 'light'
+            ? false
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
           document.documentElement.classList.toggle('dark', dark);
         } catch (e) {

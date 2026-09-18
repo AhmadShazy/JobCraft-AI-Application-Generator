@@ -1,15 +1,37 @@
 import { useState } from 'react';
-import { X, Calendar, FileText, Download, ChevronDown, ChevronUp, History } from 'lucide-react';
-import { getDownloadUrl } from '../api/client';
+import { X, Calendar, FileText, Download, ChevronDown, ChevronUp, History, Loader2 } from 'lucide-react';
+import { downloadDocument } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
   const [expandedJdId, setExpandedJdId] = useState(null);
+  const [downloadingFile, setDownloadingFile] = useState(null);
+  const { addToast } = useToast();
 
   const toggleJd = (id) => {
     if (expandedJdId === id) {
       setExpandedJdId(null);
     } else {
       setExpandedJdId(id);
+    }
+  };
+
+  // Download through axios so an expired/purged file surfaces a clear error
+  // instead of silently navigating to a 403/404 page.
+  const handleDownload = async (filename, label) => {
+    if (!filename) return;
+    setDownloadingFile(filename);
+    try {
+      await downloadDocument(`/download/${filename}`);
+    } catch (err) {
+      console.error(err);
+      addToast(
+        err.response?.data?.detail ||
+        `Could not download the ${label}. It may have expired — generate again from the dashboard.`,
+        'error'
+      );
+    } finally {
+      setDownloadingFile(null);
     }
   };
 
@@ -85,22 +107,28 @@ function HistoryDrawer({ isOpen, onClose, historyList, onRefresh }) {
 
                   {/* Redownload controls */}
                   <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-1">
-                    <a
-                      href={getDownloadUrl(item.resume_filename)}
-                      download
-                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(item.resume_filename, 'resume')}
+                      disabled={downloadingFile === item.resume_filename}
+                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      <Download className="w-3.5 h-3.5" />
+                      {downloadingFile === item.resume_filename
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Download className="w-3.5 h-3.5" />}
                       <span>Resume</span>
-                    </a>
-                    <a
-                      href={getDownloadUrl(item.coverletter_filename)}
-                      download
-                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer"
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(item.coverletter_filename, 'cover letter')}
+                      disabled={downloadingFile === item.coverletter_filename}
+                      className="flex items-center justify-center space-x-1 py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-accent-600 dark:hover:text-accent-400 border border-slate-200 dark:border-slate-700 hover:border-accent-300 dark:hover:border-accent-500/50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      <Download className="w-3.5 h-3.5" />
+                      {downloadingFile === item.coverletter_filename
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Download className="w-3.5 h-3.5" />}
                       <span>Cover Letter</span>
-                    </a>
+                    </button>
                   </div>
 
                   {/* Collapsible JD */}

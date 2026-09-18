@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { normalizeProfile, saveProfile } from '../api/client';
@@ -13,13 +13,48 @@ const CATEGORY_LABELS = {
   concepts: 'Concepts',
 };
 
+// Wizard progress is mirrored to localStorage so a refresh, tab close, or session
+// expiry mid-setup doesn't wipe everything the user typed.
+const DRAFT_KEY = 'jobcraft_setup_draft_v1';
+
+const DEFAULT_DRAFT = {
+  step: 1,
+  basicInfo: { name: '', email: '', phone: '', location: '', linkedin: '', github: '', portfolio: '', tagline: '' },
+  languages: [{ language: 'English', level: 'Proficient' }],
+  educations: [{ institution: '', degree: 'Bachelor of Science', field: 'Computer Science', duration: '', note: '' }],
+  experience: '', skills: '', projects: '', certifications: '', volunteer: '', additionalInfo: '',
+};
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return DEFAULT_DRAFT;
+    return { ...DEFAULT_DRAFT, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_DRAFT;
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch { /* storage unavailable */ }
+}
+
 function ProfileSetup({ darkMode, toggleDarkMode }) {
   const { setProfileComplete, logout } = useAuth();
   const { addToast } = useToast();
-  const [step, setStep] = useState(1);
+
+  // Initialise once from any saved draft.
+  const [draft] = useState(loadDraft);
+  const [step, setStep] = useState(draft.step);
   const [loading, setLoading] = useState(false);
 
   const handleBackToCredentials = async () => {
+    const ok = window.confirm(
+      'Go back to the login screen? Your progress is saved as a draft and will be restored when you return.'
+    );
+    if (!ok) return;
     setLoading(true);
     try {
       await logout();
@@ -30,38 +65,34 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
       setLoading(false);
     }
   };
-  
+
   // Normalized profile preview state
   const [normalizedPreview, setNormalizedPreview] = useState(null);
 
   // Step 1: Basic Info
-  const [basicInfo, setBasicInfo] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    location: '',
-    linkedin: '',
-    github: '',
-    portfolio: '',
-    tagline: '',
-  });
-  
-  const [languages, setLanguages] = useState([
-    { language: 'English', level: 'Proficient' }
-  ]);
+  const [basicInfo, setBasicInfo] = useState(draft.basicInfo);
+  const [languages, setLanguages] = useState(draft.languages);
 
   // Step 2: Education
-  const [educations, setEducations] = useState([
-    { institution: '', degree: "Bachelor of Science", field: 'Computer Science', duration: '', note: '' }
-  ]);
+  const [educations, setEducations] = useState(draft.educations);
 
   // Step 3: Free Text
-  const [experience, setExperience] = useState('');
-  const [skills, setSkills] = useState('');
-  const [projects, setProjects] = useState('');
-  const [certifications, setCertifications] = useState('');
-  const [volunteer, setVolunteer] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
+  const [experience, setExperience] = useState(draft.experience);
+  const [skills, setSkills] = useState(draft.skills);
+  const [projects, setProjects] = useState(draft.projects);
+  const [certifications, setCertifications] = useState(draft.certifications);
+  const [volunteer, setVolunteer] = useState(draft.volunteer);
+  const [additionalInfo, setAdditionalInfo] = useState(draft.additionalInfo);
+
+  // Persist progress to localStorage on any change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        step, basicInfo, languages, educations,
+        experience, skills, projects, certifications, volunteer, additionalInfo,
+      }));
+    } catch { /* storage unavailable */ }
+  }, [step, basicInfo, languages, educations, experience, skills, projects, certifications, volunteer, additionalInfo]);
 
   // Handle Basic Info inputs
   const handleBasicChange = (e) => {
@@ -76,9 +107,8 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
     setLanguages(languages.filter((_, i) => i !== index));
   };
   const handleLanguageChange = (index, field, value) => {
-    const updated = [...languages];
-    updated[index][field] = value;
-    setLanguages(updated);
+    // Replace the element object rather than mutating it in place.
+    setLanguages(languages.map((lang, i) => (i === index ? { ...lang, [field]: value } : lang)));
   };
 
   // Add/Remove Education
@@ -89,9 +119,7 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
     setEducations(educations.filter((_, i) => i !== index));
   };
   const handleEducationChange = (index, field, value) => {
-    const updated = [...educations];
-    updated[index][field] = value;
-    setEducations(updated);
+    setEducations(educations.map((edu, i) => (i === index ? { ...edu, [field]: value } : edu)));
   };
 
   // Step 1 Validation
@@ -114,11 +142,23 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
     return true;
   };
 
+  // Step 3 Validation — don't spend a Gemini call (and save an empty profile) with
+  // no substantive background at all.
+  const validateStep3 = () => {
+    const hasContent = [experience, skills, projects, certifications, volunteer].some(t => t.trim());
+    if (!hasContent) {
+      addToast('Add at least your skills or work experience before running the AI step.', 'error');
+      return false;
+    }
+    return true;
+  };
+
   // Proceed steps
   const nextStep = () => {
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
-    
+    if (step === 3 && !validateStep3()) return;
+
     if (step === 3) {
       setStep(4);
       triggerNormalization();
@@ -170,8 +210,39 @@ function ProfileSetup({ darkMode, toggleDarkMode }) {
     if (!normalizedPreview) return;
     setLoading(true);
     try {
-      await saveProfile(normalizedPreview);
-      setProfileComplete(true); // Redirection triggered via App.jsx state
+      // The form fields are authoritative — overlay them so a required field the
+      // model happened to drop during normalization can't leave the saved profile
+      // incomplete (which would silently bounce the user back into the wizard).
+      const finalProfile = {
+        ...normalizedPreview,
+        name: basicInfo.name,
+        email: basicInfo.email,
+        phone: basicInfo.phone,
+        location: basicInfo.location,
+        linkedin: basicInfo.linkedin,
+        github: basicInfo.github,
+        portfolio: basicInfo.portfolio,
+        tagline: normalizedPreview.tagline || basicInfo.tagline,
+        languages: (normalizedPreview.languages && normalizedPreview.languages.length)
+          ? normalizedPreview.languages
+          : languages.filter(l => l.language.trim()),
+        education: (normalizedPreview.education && normalizedPreview.education.length)
+          ? normalizedPreview.education
+          : educations,
+      };
+
+      const res = await saveProfile(finalProfile);
+      // Honour the server's authoritative completeness verdict rather than assuming true.
+      if (res.profile_complete) {
+        clearDraft();
+        setProfileComplete(true); // Redirection triggered via App.jsx state
+      } else {
+        addToast(
+          'Your profile is still missing a required field (name, email, phone, location, or education). Please review Steps 1–2.',
+          'error'
+        );
+        setStep(1);
+      }
     } catch (err) {
       console.error(err);
       addToast(err.response?.data?.detail || 'Failed to save candidate profile details.', 'error');

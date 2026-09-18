@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getMyProfile, normalizeProfile, updateProfile, sendVerificationEmail } from '../api/client';
+import { getMyProfile, normalizeProfile, updateProfile } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Sparkles, Loader2, Plus, Trash2, AlertTriangle, ArrowLeft, Save, Eye, Sun, Moon } from 'lucide-react';
+import { Sparkles, Loader2, Plus, Trash2, ArrowLeft, Save, Eye, Sun, Moon } from 'lucide-react';
 
 const CATEGORY_LABELS = {
   languages: 'Languages',
@@ -24,7 +24,12 @@ const serializeExperience = (expList) => {
 
 const serializeSkills = (skillsObj) => {
   if (!skillsObj) return '';
-  return Object.values(skillsObj).flat().filter(Boolean).join(', ');
+  // Preserve categorization ("Label: a, b, c" per line) rather than flattening
+  // every category into one comma list, which lost the grouping on round-trip.
+  return Object.entries(skillsObj)
+    .filter(([, list]) => Array.isArray(list) && list.length > 0)
+    .map(([cat, list]) => `${CATEGORY_LABELS[cat] || cat}: ${list.join(', ')}`)
+    .join('\n');
 };
 
 const serializeProjects = (projList) => {
@@ -49,32 +54,12 @@ const serializeVolunteering = (volList) => {
 };
 
 function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
-  const { setProfileComplete, emailVerified } = useAuth();
+  const { setProfileComplete } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [normLoading, setNormLoading] = useState(false);
-  const [sendingVerification, setSendingVerification] = useState(false);
-  const [verificationSent, setVerificationSent] = useState(false);
 
-  const handleSendVerification = async () => {
-    setSendingVerification(true);
-    try {
-      await sendVerificationEmail();
-      setVerificationSent(true);
-      addToast('Verification email sent. Check your inbox.', 'success');
-    } catch (err) {
-      console.error(err);
-      addToast(
-        err.response?.data?.detail || 
-        'Failed to send verification email. Please try again later.',
-        'error'
-      );
-    } finally {
-      setSendingVerification(false);
-    }
-  };
-  
   // UI Tabs for Edit view
   const [activeTab, setActiveTab] = useState('forms'); // 'forms' | 'freetext'
   
@@ -189,9 +174,9 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
     setLanguages(languages.filter((_, i) => i !== index));
   };
   const handleLanguageChange = (index, field, value) => {
-    const updated = [...languages];
-    updated[index][field] = value;
-    setLanguages(updated);
+    // Replace the element object rather than mutating it in place — the old
+    // in-place mutation also rewrote the shared baseline used for change detection.
+    setLanguages(languages.map((lang, i) => (i === index ? { ...lang, [field]: value } : lang)));
   };
 
   // Add/Remove Education
@@ -202,9 +187,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
     setEducations(educations.filter((_, i) => i !== index));
   };
   const handleEducationChange = (index, field, value) => {
-    const updated = [...educations];
-    updated[index][field] = value;
-    setEducations(updated);
+    setEducations(educations.map((edu, i) => (i === index ? { ...edu, [field]: value } : edu)));
   };
 
   // Direct Save for Basic Info and Educations
@@ -288,14 +271,19 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
 
       const result = await normalizeProfile(payload);
       
-      // Merge results with existing unchanged structured segments
+      // Merge results with existing unchanged structured segments. Spreading the
+      // original profile FIRST preserves any stored fields the fresh normalize
+      // call doesn't re-emit (e.g. extracurriculars), so saving the free-text tab
+      // no longer silently drops them via the wholesale profile replace.
       const mergedResult = {
+        ...(originalStructuredProfile || {}),
         ...result,
         experience: hasExpChanged ? result.experience : (originalStructuredProfile?.experience || []),
         skills: hasSkillsChanged ? result.skills : (originalStructuredProfile?.skills || {}),
         projects: hasProjectsChanged ? result.projects : (originalStructuredProfile?.projects || []),
         certifications: hasCertsChanged ? result.certifications : (originalStructuredProfile?.certifications || []),
         volunteer: hasVolChanged ? result.volunteer : (originalStructuredProfile?.volunteer || []),
+        extracurriculars: hasVolChanged ? (result.extracurriculars || []) : (originalStructuredProfile?.extracurriculars || []),
         summary: hasAddChanged ? result.summary : (originalStructuredProfile?.summary || ""),
         // Basic info and education from current form states
         name: basicInfo.name,
@@ -411,32 +399,6 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
           </button>
         </div>
       </header>
-
-      {/* Verification Banner */}
-      {!emailVerified && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 flex items-center justify-between gap-4 text-amber-900 dark:text-amber-300 text-sm animate-fade-in flex-shrink-0 font-medium">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <span>Please verify your email address to secure your account.</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {verificationSent ? (
-              <span className="text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800 animate-fade-in">
-                Verification email sent. Check your inbox.
-              </span>
-            ) : (
-              <button
-                onClick={handleSendVerification}
-                disabled={sendingVerification}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-semibold border border-amber-300 dark:border-amber-800 transition-all text-xs disabled:opacity-50 cursor-pointer"
-              >
-                {sendingVerification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Send Verification Email</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Main Container */}
       <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto p-6 relative">
@@ -585,7 +547,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Work Experience</label>
-                  <textarea value={experienceText} onChange={(e) => setExperienceText(e.target.value)} rows="5" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder="Use format: Title | Company | Location | Duration\n- Bullet 1\n- Bullet 2"></textarea>
+                  <textarea value={experienceText} onChange={(e) => setExperienceText(e.target.value)} rows="5" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder={"Use format: Title | Company | Location | Duration\n- Bullet 1\n- Bullet 2"}></textarea>
                 </div>
 
                 <div className="space-y-1">
@@ -595,7 +557,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Projects</label>
-                  <textarea value={projectsText} onChange={(e) => setProjectsText(e.target.value)} rows="5" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder="Use format: Project Name | Type | Duration | Stack: Tech\n- Bullet 1\n- Bullet 2"></textarea>
+                  <textarea value={projectsText} onChange={(e) => setProjectsText(e.target.value)} rows="5" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder={"Use format: Project Name | Type | Duration | Stack: Tech\n- Bullet 1\n- Bullet 2"}></textarea>
                 </div>
 
                 <div className="space-y-1">
@@ -605,7 +567,7 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Volunteering & Activities</label>
-                  <textarea value={volText} onChange={(e) => setVolText(e.target.value)} rows="3" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder="Use format: Role | Organization | Duration\n- Bullet 1"></textarea>
+                  <textarea value={volText} onChange={(e) => setVolText(e.target.value)} rows="3" className="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-100 dark:focus:ring-accent-500/40 focus:border-accent-500 transition-all shadow-sm" placeholder={"Use format: Role | Organization | Duration\n- Bullet 1"}></textarea>
                 </div>
 
                 <div className="space-y-1">
@@ -718,6 +680,42 @@ function ProfileEdit({ onBackToDashboard, darkMode, toggleDarkMode }) {
                     ))
                   ) : (
                     <div className="text-accent-500 dark:text-accent-400 text-xs font-bold">[No Projects Extracted]</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Certifications and Volunteering — shown so a save that overwrites
+                  the whole profile can't hide changes to these sections. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Certifications */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-cyan-100/60 dark:border-slate-800 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Certifications</h4>
+                  {normalizedPreview.certifications && normalizedPreview.certifications.length > 0 ? (
+                    normalizedPreview.certifications.map((c, i) => (
+                      <div key={i} className="text-xs text-slate-600 dark:text-slate-300">
+                        {c.name} — <span className="text-slate-500 dark:text-slate-400 font-bold">{c.issuer}{c.date ? ` (${c.date})` : ''}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-accent-500 dark:text-accent-400 text-xs font-bold">[No Certifications Extracted]</div>
+                  )}
+                </div>
+
+                {/* Volunteering */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-cyan-100/60 dark:border-slate-800 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Volunteering</h4>
+                  {normalizedPreview.volunteer && normalizedPreview.volunteer.length > 0 ? (
+                    normalizedPreview.volunteer.map((v, i) => (
+                      <div key={i} className="text-xs space-y-1 border-b border-slate-200/60 dark:border-slate-800 last:border-b-0 pb-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200">{v.role} at {v.organization}</div>
+                        <div className="text-slate-500 dark:text-slate-400">{v.duration}</div>
+                        <ul className="list-disc pl-4 text-slate-600 dark:text-slate-300 space-y-0.5 mt-1">
+                          {v.bullets?.map((b, idx) => <li key={idx}>{b}</li>)}
+                        </ul>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-accent-500 dark:text-accent-400 text-xs font-bold">[No Volunteering Extracted]</div>
                   )}
                 </div>
               </div>

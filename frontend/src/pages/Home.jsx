@@ -5,50 +5,17 @@ import GenerateButton from '../components/GenerateButton';
 import Loader from '../components/Loader';
 import QAPanel from '../components/QAPanel';
 import HistoryDrawer from '../components/HistoryDrawer';
-import { generateDocs, answerQuestion, getHistory, sendVerificationEmail, API_BASE_URL } from '../api/client';
+import { generateDocs, answerQuestion, getHistory, downloadDocument } from '../api/client';
 import { useToast } from '../context/ToastContext';
-import { useAuth } from '../context/AuthContext';
 import ProfileEdit from './ProfileEdit';
-import { AlertTriangle, Loader2 } from 'lucide-react';
-
-
-
-const triggerDownload = (url) => {
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = `${API_BASE_URL}${url}`;
-  document.body.appendChild(iframe);
-  setTimeout(() => {
-    document.body.removeChild(iframe);
-  }, 2000);
-};
+import Settings from './Settings';
+import { FileText, Download, Loader2, CheckCircle2 } from 'lucide-react';
 
 function Home({ onLogout, darkMode, toggleDarkMode }) {
   const [jd, setJd] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { addToast } = useToast();
-  const { emailVerified } = useAuth();
-  const [sendingVerification, setSendingVerification] = useState(false);
-  const [verificationSent, setVerificationSent] = useState(false);
-
-  const handleSendVerification = async () => {
-    setSendingVerification(true);
-    try {
-      await sendVerificationEmail();
-      setVerificationSent(true);
-      addToast('Verification email sent. Check your inbox.', 'success');
-    } catch (err) {
-      console.error(err);
-      addToast(
-        err.response?.data?.detail || 
-        'Failed to send verification email. Please try again later.',
-        'error'
-      );
-    } finally {
-      setSendingVerification(false);
-    }
-  };
 
   // History state
   const [historyList, setHistoryList] = useState([]);
@@ -58,8 +25,13 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
   const [qaList, setQaList] = useState([]);
   const [isAnswering, setIsAnswering] = useState(false);
 
-  // Profile Edit toggle state
+  // Generated documents result + per-file download state
+  const [result, setResult] = useState(null); // { resume_url, coverletter_url }
+  const [downloadingUrl, setDownloadingUrl] = useState(null);
+
+  // Sub-view toggles (this app has no router)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isViewingSettings, setIsViewingSettings] = useState(false);
 
   const fetchHistory = async () => {
     try {
@@ -77,6 +49,23 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
     fetchHistory();
   }, []);
 
+  const handleDownload = async (url, label) => {
+    if (!url) return;
+    setDownloadingUrl(url);
+    try {
+      await downloadDocument(url);
+    } catch (err) {
+      console.error(err);
+      addToast(
+        err.response?.data?.detail ||
+        `Could not download the ${label || 'document'}. It may have expired — try generating again.`,
+        'error'
+      );
+    } finally {
+      setDownloadingUrl(null);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!jd.trim()) {
       addToast('Please fill in all required fields before continuing.', 'error');
@@ -84,26 +73,19 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
     }
 
     setIsGenerating(true);
+    setResult(null);
 
     try {
       const data = await generateDocs(jd.trim(), companyName.trim());
-      // Auto-refresh history lists so the generated item is added instantly
+      setResult(data);
+      // Auto-refresh history so the generated item appears instantly
       fetchHistory();
-
-      // Automatically trigger downloads
-      if (data.resume_url) {
-        triggerDownload(data.resume_url);
-      }
-      if (data.coverletter_url) {
-        setTimeout(() => {
-          triggerDownload(data.coverletter_url);
-        }, 500);
-      }
+      addToast('Documents generated. Download them below.', 'success');
     } catch (err) {
       console.error(err);
       addToast(
-        err.response?.data?.detail || 
-        'Failed to generate application files. Please check if your FastAPI backend server is running and configured with a valid GEMINI_API_KEY.',
+        err.response?.data?.detail ||
+        'Failed to generate application files. Please try again in a moment.',
         'error'
       );
     } finally {
@@ -125,7 +107,7 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
     } catch (err) {
       console.error(err);
       addToast(
-        err.response?.data?.detail || 
+        err.response?.data?.detail ||
         'Failed to get Q&A response from AI. Verify backend status.',
         'error'
       );
@@ -138,47 +120,33 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
     return <ProfileEdit onBackToDashboard={() => setIsEditingProfile(false)} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
   }
 
+  if (isViewingSettings) {
+    return (
+      <Settings
+        onBackToDashboard={() => setIsViewingSettings(false)}
+        onLoggedOutSelf={onLogout}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <Navbar 
-        onLogout={onLogout} 
-        onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} 
-        onEditProfile={() => setIsEditingProfile(true)} 
+      <Navbar
+        onLogout={onLogout}
+        onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)}
+        onEditProfile={() => setIsEditingProfile(true)}
+        onOpenSettings={() => setIsViewingSettings(true)}
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
       />
 
-      {/* Verification Banner */}
-      {!emailVerified && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 flex items-center justify-between gap-4 text-amber-900 dark:text-amber-300 text-sm animate-fade-in flex-shrink-0 font-medium transition-colors duration-200">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <span>Please verify your email address to secure your account.</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {verificationSent ? (
-              <span className="text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800 animate-fade-in">
-                Verification email sent. Check your inbox.
-              </span>
-            ) : (
-              <button
-                onClick={handleSendVerification}
-                disabled={sendingVerification}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-semibold border border-amber-300 dark:border-amber-800 transition-all text-xs disabled:opacity-50 cursor-pointer"
-              >
-                {sendingVerification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Send Verification Email</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
-        
+
         {/* Dashboard Workspace — fills all remaining height */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-y-auto lg:overflow-hidden pr-1">
-          
+
           {/* Left Column (Inputs & Generation) */}
           <div className="flex flex-col h-[500px] lg:h-full gap-4 overflow-hidden">
             <JDInput
@@ -195,6 +163,40 @@ function Home({ onLogout, darkMode, toggleDarkMode }) {
                 disabled={isGenerating || !jd.trim()}
               />
               {isGenerating && <Loader />}
+
+              {/* Results panel — replaces the old invisible iframe download */}
+              {result && !isGenerating && (
+                <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-xl animate-fade-in">
+                  <div className="flex items-center gap-2 mb-3 text-emerald-700 dark:text-emerald-300 text-sm font-bold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Your documents are ready</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleDownload(result.resume_url, 'resume')}
+                      disabled={downloadingUrl === result.resume_url}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                    >
+                      {downloadingUrl === result.resume_url
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <FileText className="w-4 h-4 text-accent-600 dark:text-accent-400" />}
+                      Resume
+                      <Download className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                    <button
+                      onClick={() => handleDownload(result.coverletter_url, 'cover letter')}
+                      disabled={downloadingUrl === result.coverletter_url}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                    >
+                      {downloadingUrl === result.coverletter_url
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <FileText className="w-4 h-4 text-accent-600 dark:text-accent-400" />}
+                      Cover Letter
+                      <Download className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
